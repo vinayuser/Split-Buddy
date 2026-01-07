@@ -24,8 +24,17 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.splitbuddy.app",
-      "permissions": []
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "allowBackup": true,
+      "usesCleartextTraffic": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "90f35f31-dd41-4b63-be5e-7ef4936ff3b1"
+      }
     }
   }
 }
-
