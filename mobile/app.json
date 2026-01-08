@@ -12,11 +12,16 @@
         {
           "android": {
             "usesCleartextTraffic": true,
-            "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml"
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "34.0.0",
+            "minSdkVersion": 21,
+            "kotlinVersion": "1.8.0"
           }
         }
       ],
       "./plugins/with-network-security.js",
+      "./plugins/with-build-properties.js",
       "expo-contacts",
       [
         "expo-notifications",
@@ -34,23 +39,28 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-            "permissions": [
-              "INTERNET",
-              "ACCESS_NETWORK_STATE",
-              "READ_CONTACTS",
-              "CAMERA",
-              "READ_EXTERNAL_STORAGE",
-              "WRITE_EXTERNAL_STORAGE"
-            ],
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "READ_CONTACTS",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ],
       "usesCleartextTraffic": true
     },
     "ios": {
-      "bundleIdentifier": "com.nishadasuya786.splitbuddy"
+      "bundleIdentifier": "com.nishadasuya786.splitbuddy",
+      "infoPlist": {
+        "NSContactsUsageDescription": "Allow $(PRODUCT_NAME) to access your contacts"
+      }
     },
-    "owner": "nishadasuya786",
+    "owner": "vinaydasuya786",
     "extra": {
       "eas": {
-        "projectId": "2a205468-d6d8-4228-9d2e-c43f02a76759"
+        "projectId": "259dbdb8-d308-4ad7-9a93-017bf9107cb4"
       }
     }
   }
