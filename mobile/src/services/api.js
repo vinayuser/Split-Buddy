@@ -143,6 +143,10 @@ export const balanceAPI = {
     const response = await api.get(`/balances/group/${groupId}/user`);
     return response.data;
   },
+  getFriendBalances: async () => {
+    const response = await api.get('/balances/friends');
+    return response.data;
+  },
 };
 
 // Settlement APIs
@@ -184,6 +188,26 @@ export const subscriptionAPI = {
 export const activityAPI = {
   getActivities: async (page = 1, limit = 20) => {
     const response = await api.get(`/activities?page=${page}&limit=${limit}`);
+    return response.data;
+  },
+};
+
+// Notification APIs
+export const notificationAPI = {
+  registerToken: async (fcmToken) => {
+    const response = await api.post('/notifications/register-token', { fcmToken });
+    return response.data;
+  },
+  removeToken: async () => {
+    const response = await api.post('/notifications/remove-token');
+    return response.data;
+  },
+};
+
+// Banner APIs
+export const bannerAPI = {
+  getBanners: async (active = true) => {
+    const response = await api.get(`/banners?active=${active}`);
     return response.data;
   },
 };

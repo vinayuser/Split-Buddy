@@ -1,19 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
+  Dimensions,
 } from 'react-native';
+import { Text, TextInput, Button, Card, Surface } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { authAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, typography, borderRadius } from '../../theme/colors';
+
+const { width } = Dimensions.get('window');
+const isSmallScreen = width < 375;
 
 export default function OTPScreen({ route, navigation }) {
   const { userId, otp: receivedOTP } = route.params || {};
@@ -62,8 +64,19 @@ export default function OTPScreen({ route, navigation }) {
       
       if (response && response.success) {
         await login(response.user, response.token, response.refreshToken);
-        // Navigation will be handled automatically by App.js when user state updates
-        // No need to navigate manually - AuthContext will trigger re-render
+        
+        // Check if profile needs setup (name is just phone number or missing)
+        const userName = response.user?.name || '';
+        const userPhone = response.user?.phone || '';
+        const needsProfileSetup = !userName || userName === userPhone || userName.length < 2;
+        
+        if (needsProfileSetup) {
+          // Navigate to profile setup
+          navigation.replace('ProfileSetup');
+        } else {
+          // Navigation will be handled automatically by App.js when user state updates
+          // No need to navigate manually - AuthContext will trigger re-render
+        }
       } else {
         Alert.alert('Error', response?.message || 'Invalid OTP');
       }
@@ -106,69 +119,92 @@ export default function OTPScreen({ route, navigation }) {
           >
             <Icon name="arrow-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <View style={styles.logoContainer}>
-            <Icon name="shield-check" size={48} color={colors.primary} />
+          <View style={styles.logoWrapper}>
+            <Surface style={styles.logoContainer} elevation={3}>
+              <View style={styles.logoGradient}>
+                <Icon name="shield-check" size={48} color={colors.background} />
+              </View>
+            </Surface>
+            <View style={styles.secureBadge}>
+              <Icon name="lock" size={12} color={colors.primary} />
+            </View>
           </View>
-          <Text style={styles.title}>Enter Verification Code</Text>
-          <Text style={styles.subtitle}>
-            We sent a verification code to your {receivedOTP ? 'device' : 'phone/email'}
+          <Text variant="headlineSmall" style={styles.title}>Verify Your Phone</Text>
+          <Text variant="bodyMedium" style={styles.subtitle}>
+            We sent a 6-digit verification code to your phone via SMS
           </Text>
+          <Card mode="outlined" style={styles.infoCard}>
+            <Card.Content>
+              <View style={styles.infoRow}>
+                <Icon name="information-outline" size={20} color={colors.primary} />
+                <Text variant="bodySmall" style={styles.infoText}>
+                  The code will expire in 10 minutes. Didn't receive it? Tap "Resend OTP" below.
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
         </View>
 
         {/* OTP Display (Development Mode) */}
         {displayOTP && (
-          <View style={styles.otpDisplayContainer}>
-            <View style={styles.otpDisplayBox}>
-              <Icon name="information-outline" size={20} color={colors.primary} />
-              <Text style={styles.otpDisplayLabel}>Your OTP (Development Mode):</Text>
-              <Text style={styles.otpDisplayCode}>{displayOTP}</Text>
-            </View>
-          </View>
+          <Card mode="outlined" style={styles.otpDisplayCard}>
+            <Card.Content>
+              <View style={styles.otpDisplayBox}>
+                <Icon name="information-outline" size={20} color={colors.primary} />
+                <Text variant="bodySmall" style={styles.otpDisplayLabel}>
+                  Your OTP (Development Mode):
+                </Text>
+                <Text variant="headlineSmall" style={styles.otpDisplayCode}>
+                  {displayOTP}
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
         )}
 
         {/* OTP Input */}
-        <View style={styles.inputSection}>
-          <View style={styles.otpContainer}>
-            {otp.map((digit, index) => (
-              <TextInput
-                key={index}
-                ref={(ref) => (inputRefs.current[index] = ref)}
-                style={[styles.otpInput, digit && styles.otpInputFilled]}
-                value={digit}
-                onChangeText={(value) => handleOTPChange(index, value)}
-                onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
-                keyboardType="number-pad"
-                maxLength={1}
-                selectTextOnFocus
-              />
-            ))}
-          </View>
+        <Card style={styles.inputCard} mode="elevated">
+          <Card.Content>
+            <View style={styles.otpContainer}>
+              {otp.map((digit, index) => (
+                <TextInput
+                  key={index}
+                  ref={(ref) => (inputRefs.current[index] = ref)}
+                  mode="outlined"
+                  value={digit}
+                  onChangeText={(value) => handleOTPChange(index, value)}
+                  onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  selectTextOnFocus
+                  style={styles.otpInput}
+                  contentStyle={styles.otpInputContent}
+                />
+              ))}
+            </View>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleVerify}
-            disabled={loading || otp.join('').length < 4}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <>
-                <Text style={styles.buttonText}>Verify</Text>
-                <Icon name="check-circle" size={20} color={colors.background} />
-              </>
-            )}
-          </TouchableOpacity>
+            <Button
+              mode="contained"
+              onPress={handleVerify}
+              disabled={loading || otp.join('').length < 4}
+              loading={loading}
+              icon="check-circle"
+              style={styles.button}
+              contentStyle={styles.buttonContent}
+            >
+              Verify
+            </Button>
 
-          <TouchableOpacity
-            style={styles.resendButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
-            <Icon name="refresh" size={16} color={colors.primary} />
-            <Text style={styles.resendText}>Resend OTP</Text>
-          </TouchableOpacity>
-        </View>
+            <Button
+              mode="text"
+              onPress={() => navigation.goBack()}
+              icon="refresh"
+              style={styles.resendButton}
+            >
+              Resend OTP
+            </Button>
+          </Card.Content>
+        </Card>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -184,11 +220,12 @@ export default function OTPScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   content: {
     flex: 1,
-    padding: spacing.lg,
+    padding: isSmallScreen ? spacing.md : spacing.lg,
+    paddingBottom: spacing.xl,
   },
   header: {
     alignItems: 'center',
@@ -201,51 +238,81 @@ const styles = StyleSheet.create({
     top: 0,
     padding: spacing.sm,
   },
+  logoWrapper: {
+    position: 'relative',
+    marginBottom: spacing.lg,
+    alignSelf: 'center',
+  },
   logoContainer: {
-    width: 80,
-    height: 80,
+    width: isSmallScreen ? 90 : 100,
+    height: isSmallScreen ? 90 : 100,
     borderRadius: borderRadius.round,
-    backgroundColor: colors.primaryLight,
+    overflow: 'hidden',
+  },
+  logoGradient: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+  },
+  secureBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.round,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  infoCard: {
+    marginTop: spacing.md,
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  infoText: {
+    flex: 1,
+    color: colors.primaryDark,
+    lineHeight: 18,
   },
   title: {
-    ...typography.h1,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
-    ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  otpDisplayContainer: {
+  otpDisplayCard: {
     marginBottom: spacing.lg,
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
   },
   otpDisplayBox: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.primary,
   },
   otpDisplayLabel: {
-    ...typography.bodySmall,
     color: colors.primaryDark,
     flex: 1,
   },
   otpDisplayCode: {
-    ...typography.h2,
     color: colors.primaryDark,
     fontWeight: '700',
     letterSpacing: 4,
   },
-  inputSection: {
+  inputCard: {
     flex: 1,
     justifyContent: 'center',
   },
@@ -253,58 +320,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: spacing.xl,
-    gap: spacing.sm,
+    gap: isSmallScreen ? spacing.xs : spacing.sm,
   },
   otpInput: {
     flex: 1,
-    height: 56,
-    borderWidth: 2,
-    borderColor: colors.inputBorder,
-    borderRadius: borderRadius.md,
-    textAlign: 'center',
-    ...typography.h2,
-    fontWeight: '700',
-    backgroundColor: colors.inputBackground,
-    color: colors.textPrimary,
   },
-  otpInputFilled: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
+  otpInputContent: {
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '700',
   },
   button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
     marginBottom: spacing.md,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    ...typography.button,
-    color: colors.background,
+  buttonContent: {
+    paddingVertical: spacing.xs,
   },
   resendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    padding: spacing.sm,
-  },
-  resendText: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '600',
+    marginTop: spacing.sm,
   },
   footer: {
     paddingBottom: spacing.lg,

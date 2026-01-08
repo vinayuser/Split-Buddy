@@ -1,47 +1,40 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  Dimensions,
+  Image,
 } from 'react-native';
+import { Text, TextInput, Button } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { authAPI } from '../../services/api';
 import { colors, spacing, typography, borderRadius } from '../../theme/colors';
 
+const { width } = Dimensions.get('window');
+const isSmallScreen = width < 375;
+
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [useEmail, setUseEmail] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSendOTP = async () => {
-    if (!phone && !email) {
-      Alert.alert('Error', 'Please enter phone number or email');
+    if (!phone) {
+      Alert.alert('Error', 'Please enter your phone number');
       return;
     }
 
-    if (useEmail && !email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email');
-      return;
-    }
-
-    if (!useEmail && phone.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+    if (phone.length < 10) {
+      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await authAPI.sendOTP(
-        useEmail ? null : phone,
-        useEmail ? email : null
-      );
+      const response = await authAPI.sendOTP(phone, null);
       
       if (response && response.success) {
         navigation.navigate('OTP', { 
@@ -81,112 +74,117 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Icon name="account-group" size={64} color={colors.primary} />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* App Logo */}
+        <View style={styles.logoSection}>
+          <View style={styles.logoCircleContainer}>
+            <Image 
+              source={require('../../../assets/app_logo.png')} 
+              style={styles.appLogo}
+              resizeMode="cover"
+            />
           </View>
-          <Text style={styles.title}>Welcome to Split Buddy</Text>
-          <Text style={styles.subtitle}>
-            Enter your {useEmail ? 'email' : 'phone number'} to continue
-          </Text>
         </View>
 
-        {/* Input Section */}
+        {/* Features Grid */}
+        <View style={styles.featuresGrid}>
+          <View style={styles.featureCard}>
+            <View style={styles.featureIconContainer}>
+              <Icon name="receipt" size={28} color={colors.primary} />
+            </View>
+            <Text variant="bodySmall" style={styles.featureTitle}>
+              Track Expenses
+            </Text>
+            <Text variant="bodySmall" style={styles.featureDescription}>
+              Record every shared expense
+            </Text>
+          </View>
+          
+          <View style={styles.featureCard}>
+            <View style={styles.featureIconContainer}>
+              <Icon name="account-multiple" size={28} color={colors.primary} />
+            </View>
+            <Text variant="bodySmall" style={styles.featureTitle}>
+              Auto Split
+            </Text>
+            <Text variant="bodySmall" style={styles.featureDescription}>
+              Split bills automatically
+            </Text>
+          </View>
+          
+          <View style={styles.featureCard}>
+            <View style={styles.featureIconContainer}>
+              <Icon name="wallet" size={28} color={colors.primary} />
+            </View>
+            <Text variant="bodySmall" style={styles.featureTitle}>
+              Settle Up
+            </Text>
+            <Text variant="bodySmall" style={styles.featureDescription}>
+              Clear debts easily
+            </Text>
+          </View>
+          
+          <View style={styles.featureCard}>
+            <View style={styles.featureIconContainer}>
+              <Icon name="chart-line" size={28} color={colors.primary} />
+            </View>
+            <Text variant="bodySmall" style={styles.featureTitle}>
+              Insights
+            </Text>
+            <Text variant="bodySmall" style={styles.featureDescription}>
+              View spending analytics
+            </Text>
+          </View>
+        </View>
+
+        {/* Simple Phone Input */}
         <View style={styles.inputSection}>
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity
-              style={[styles.toggle, !useEmail && styles.toggleActive]}
-              onPress={() => {
-                setUseEmail(false);
-                setEmail('');
-              }}
-              activeOpacity={0.7}
-            >
-              <Icon
-                name="phone"
-                size={18}
-                color={!useEmail ? colors.background : colors.textSecondary}
-              />
-              <Text style={[styles.toggleText, !useEmail && styles.toggleTextActive]}>
-                Phone
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggle, useEmail && styles.toggleActive]}
-              onPress={() => {
-                setUseEmail(true);
-                setPhone('');
-              }}
-              activeOpacity={0.7}
-            >
-              <Icon
-                name="email"
-                size={18}
-                color={useEmail ? colors.background : colors.textSecondary}
-              />
-              <Text style={[styles.toggleText, useEmail && styles.toggleTextActive]}>
-                Email
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TextInput
+            mode="outlined"
+            label="Phone Number"
+            placeholder="Enter 10-digit number"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            maxLength={10}
+            autoFocus
+            left={<TextInput.Icon icon="phone" />}
+            style={styles.phoneInput}
+            contentStyle={styles.phoneInputContent}
+            outlineColor={colors.inputBorder}
+            activeOutlineColor={colors.primary}
+          />
 
-          <View style={styles.inputWrapper}>
-            {useEmail ? (
-              <>
-                <Icon name="email-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email address"
-                  placeholderTextColor={colors.textTertiary}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </>
-            ) : (
-              <>
-                <Icon name="phone-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Phone number"
-                  placeholderTextColor={colors.textTertiary}
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                />
-              </>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          {/* Futuristic Continue Button */}
+          <Button
+            mode="contained"
             onPress={handleSendOTP}
-            disabled={loading || (!phone && !email)}
-            activeOpacity={0.8}
+            disabled={loading || !phone || phone.length < 10}
+            loading={loading}
+            style={styles.futuristicButton}
+            contentStyle={styles.futuristicButtonContent}
+            labelStyle={styles.futuristicButtonLabel}
+            buttonColor={colors.primary}
+            icon="arrow-right"
           >
-            {loading ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <>
-                <Text style={styles.buttonText}>Request OTP</Text>
-                <Icon name="arrow-forward" size={20} color={colors.background} />
-              </>
-            )}
-          </TouchableOpacity>
+            Continue
+          </Button>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            By continuing, you agree to our Terms of Service and Privacy Policy
+            By continuing, you agree to our{' '}
+            <Text style={styles.footerLink}>Terms of Service</Text>
+            {' '}and{' '}
+            <Text style={styles.footerLink}>Privacy Policy</Text>
           </Text>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -194,118 +192,129 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    flexGrow: 1,
     padding: spacing.lg,
+    paddingTop: spacing.xl * 2,
+    paddingBottom: spacing.xl,
+    justifyContent: 'center',
+  },
+  logoSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  logoCircleContainer: {
+    width: isSmallScreen ? 180 : 220,
+    height: isSmallScreen ? 180 : 220,
+    borderRadius: isSmallScreen ? 90 : 110,
+    overflow: 'hidden',
+    backgroundColor: colors.background,
+    borderWidth: 4,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  appLogo: {
+    width: '100%',
+    height: '100%',
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
     justifyContent: 'space-between',
   },
-  header: {
+  featureCard: {
+    width: isSmallScreen ? '48%' : '48%',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     alignItems: 'center',
-    marginTop: spacing.xl * 2,
+    marginBottom: spacing.sm,
+    minWidth: isSmallScreen ? 140 : 160,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
-  logoContainer: {
-    width: 100,
-    height: 100,
+  featureIconContainer: {
+    width: 56,
+    height: 56,
     borderRadius: borderRadius.round,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.textPrimary,
     marginBottom: spacing.sm,
+  },
+  featureTitle: {
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
     textAlign: 'center',
   },
-  subtitle: {
-    ...typography.body,
+  featureDescription: {
     color: colors.textSecondary,
     textAlign: 'center',
+    fontSize: 11,
   },
   inputSection: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: colors.inputBackground,
-    borderRadius: borderRadius.md,
-    padding: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  toggle: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.sm,
-    gap: spacing.xs,
-  },
-  toggleActive: {
-    backgroundColor: colors.primary,
-  },
-  toggleText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  toggleTextActive: {
-    ...typography.body,
-    color: colors.background,
-    fontWeight: '600',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.inputBackground,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    marginBottom: spacing.lg,
     paddingHorizontal: spacing.md,
+    marginBottom: spacing.xl,
   },
-  inputIcon: {
-    marginRight: spacing.sm,
+  phoneInput: {
+    backgroundColor: colors.background,
+    marginBottom: spacing.lg,
   },
-  input: {
-    flex: 1,
-    ...typography.body,
-    color: colors.textPrimary,
-    paddingVertical: spacing.md,
+  phoneInputContent: {
+    minHeight: 56,
   },
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+  futuristicButton: {
     borderRadius: borderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
+    marginTop: spacing.md,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    minWidth: 200,
+    height: 48,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  futuristicButtonContent: {
+    paddingVertical: spacing.xs,
+    height: 48,
+    flexDirection: 'row-reverse',
   },
-  buttonText: {
-    ...typography.button,
-    color: colors.background,
+  futuristicButtonLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   footer: {
+    marginTop: spacing.xl,
     paddingBottom: spacing.lg,
   },
   footerText: {
     ...typography.caption,
     color: colors.textTertiary,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 18,
+  },
+  footerLink: {
+    color: colors.primary,
+    fontWeight: '600',
   },
 });
+
 

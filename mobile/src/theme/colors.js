@@ -1,46 +1,46 @@
-// WhatsApp-inspired color scheme
+// Splitwise-inspired color scheme
 export const colors = {
   // Backgrounds
   background: '#FFFFFF',
-  backgroundSecondary: '#F0F2F5',
+  backgroundSecondary: '#F8F9FA',
   backgroundTertiary: '#F5F6F6',
   
   // Text
-  textPrimary: '#111B21',
-  textSecondary: '#667781',
-  textTertiary: '#8696A0',
+  textPrimary: '#1A1A1A',
+  textSecondary: '#6B7280',
+  textTertiary: '#9CA3AF',
   
-  // WhatsApp Green
-  primary: '#25D366',
-  primaryDark: '#128C7E',
-  primaryLight: '#DCF8C6',
+  // Splitwise Green (primary brand color)
+  primary: '#00A86B',
+  primaryDark: '#00855A',
+  primaryLight: '#E6F7F0',
   
   // Status colors
-  success: '#25D366',
-  error: '#F15C6D',
-  warning: '#FFB800',
+  success: '#00A86B',
+  error: '#EF4444',
+  warning: '#F59E0B',
   
   // Borders & Dividers
-  border: '#E9EDEF',
-  divider: '#E9EDEF',
+  border: '#E5E7EB',
+  divider: '#E5E7EB',
   
   // Cards & Surfaces
   card: '#FFFFFF',
-  cardHover: '#F5F6F6',
+  cardHover: '#F8F9FA',
   
-  // Balance colors
-  balancePositive: '#25D366',
-  balanceNegative: '#F15C6D',
-  balanceNeutral: '#667781',
+  // Balance colors (Splitwise style)
+  balancePositive: '#00A86B',
+  balanceNegative: '#EF4444',
+  balanceNeutral: '#6B7280',
   
   // Inputs
-  inputBackground: '#F0F2F5',
-  inputBorder: '#E9EDEF',
-  inputFocus: '#25D366',
+  inputBackground: '#F8F9FA',
+  inputBorder: '#E5E7EB',
+  inputFocus: '#00A86B',
   
   // Icons
-  iconPrimary: '#54656F',
-  iconSecondary: '#8696A0',
+  iconPrimary: '#4B5563',
+  iconSecondary: '#9CA3AF',
 };
 
 export const spacing = {

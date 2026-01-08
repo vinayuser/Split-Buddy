@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
@@ -182,10 +183,6 @@ export default function ActivityScreen() {
   if (loading && activities.length === 0) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Activities</Text>
-          <Text style={styles.headerSubtitle}>All activity from your groups</Text>
-        </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -195,11 +192,6 @@ export default function ActivityScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Activities</Text>
-        <Text style={styles.headerSubtitle}>All activity from your groups</Text>
-      </View>
-
       <FlatList
         data={activities}
         renderItem={renderActivity}
@@ -233,22 +225,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    padding: spacing.md,
-    paddingTop: spacing.lg,
-    backgroundColor: colors.backgroundSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  headerTitle: {
-    ...typography.h1,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  headerSubtitle: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
   },
   loadingContainer: {
     flex: 1,

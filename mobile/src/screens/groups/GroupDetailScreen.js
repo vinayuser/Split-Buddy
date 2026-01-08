@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,14 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import * as Contacts from 'expo-contacts';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { groupAPI, expenseAPI, settlementAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, typography, borderRadius } from '../../theme/colors';
 import { getInitials, formatDate, formatTime } from '../../utils/helpers';
 import TabView from '../../components/TabView';
+import EmptyState from '../../components/EmptyState';
 
 export default function GroupDetailScreen({ route, navigation }) {
   const { groupId } = route.params;
@@ -45,6 +47,11 @@ export default function GroupDetailScreen({ route, navigation }) {
   const [invitePhone, setInvitePhone] = useState('');
   const [useEmailForInvite, setUseEmailForInvite] = useState(true);
   const [addingMember, setAddingMember] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
+  const [contacts, setContacts] = useState([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState([]);
+  const [contactsPermissionGranted, setContactsPermissionGranted] = useState(false);
   
   // Settlement modal state
   const [showSettleModal, setShowSettleModal] = useState(false);
@@ -54,6 +61,7 @@ export default function GroupDetailScreen({ route, navigation }) {
   const [settleFromUser, setSettleFromUser] = useState('');
   const [settleToUser, setSettleToUser] = useState('');
   const [settling, setSettling] = useState(false);
+  const [dismissedSettlementHint, setDismissedSettlementHint] = useState(false);
 
   useEffect(() => {
     loadGroupData();
@@ -135,24 +143,150 @@ export default function GroupDetailScreen({ route, navigation }) {
     }
   };
 
-  const handleLoadMore = () => {
+  const handleLoadMore = useCallback(() => {
     if (!expensesLoading && expensesHasMore) {
       loadExpenses(expensesPage + 1, false);
     }
-  };
+  }, [expensesLoading, expensesHasMore, expensesPage]);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     try {
       await Share.share({
-        message: `Join my expense group! Use invite code: ${group.inviteCode}`,
+        message: `Join my expense group! Use invite code: ${group?.inviteCode || ''}`,
       });
     } catch (error) {
       Alert.alert('Error', 'Failed to share invite code');
     }
-  };
+  }, [group?.inviteCode]);
 
   const handleJoinViaCode = () => {
     setShowAddMemberModal(true);
+  };
+
+  const requestContactsPermission = async () => {
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('Permission error:', error);
+      return false;
+    }
+  };
+
+  const loadContacts = async () => {
+    const hasPermission = await requestContactsPermission();
+    if (!hasPermission) {
+      Alert.alert(
+        'Permission Denied',
+        'Contacts permission is required to select contacts. You can still enter phone numbers manually.',
+        [{ text: 'OK' }]
+      );
+      setContactsPermissionGranted(false);
+      return;
+    }
+
+    setContactsPermissionGranted(true);
+    setContactsLoading(true);
+    try {
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
+      });
+
+      // Filter contacts that have phone numbers and format them
+      const formattedContacts = data
+        .filter(contact => contact.phoneNumbers && contact.phoneNumbers.length > 0)
+        .map(contact => ({
+          id: contact.id,
+          name: contact.name || 'Unknown',
+          phoneNumbers: contact.phoneNumbers.map(phone => {
+            // Clean phone number (remove spaces, dashes, etc.)
+            let cleaned = phone.number.replace(/[\s\-\(\)]/g, '');
+            // Remove country code if present (assuming +91 for India)
+            if (cleaned.startsWith('+91')) {
+              cleaned = cleaned.substring(3);
+            } else if (cleaned.startsWith('91') && cleaned.length > 10) {
+              cleaned = cleaned.substring(2);
+            }
+            // Take only last 10 digits
+            if (cleaned.length > 10) {
+              cleaned = cleaned.substring(cleaned.length - 10);
+            }
+            return cleaned;
+          }).filter(phone => phone.length === 10),
+        }))
+        .filter(contact => contact.phoneNumbers.length > 0);
+
+      setContacts(formattedContacts);
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+      Alert.alert('Error', 'Failed to load contacts');
+    } finally {
+      setContactsLoading(false);
+    }
+  };
+
+  const handleShowContacts = async () => {
+    if (!contactsPermissionGranted && contacts.length === 0) {
+      await loadContacts();
+    }
+    setShowContacts(true);
+  };
+
+  const toggleContactSelection = (contactId) => {
+    setSelectedContacts(prev => {
+      if (prev.includes(contactId)) {
+        return prev.filter(id => id !== contactId);
+      } else {
+        return [...prev, contactId];
+      }
+    });
+  };
+
+  const handleInviteSelectedContacts = async () => {
+    if (selectedContacts.length === 0) {
+      Alert.alert('Error', 'Please select at least one contact');
+      return;
+    }
+
+    setAddingMember(true);
+    try {
+      const selectedContactData = contacts.filter(c => selectedContacts.includes(c.id));
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const contact of selectedContactData) {
+        try {
+          // Use the first phone number
+          const phone = contact.phoneNumbers[0];
+          const response = await groupAPI.inviteMember(groupId, null, phone);
+          if (response.success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        Alert.alert(
+          'Success',
+          `${successCount} member(s) invited successfully${failCount > 0 ? `, ${failCount} failed` : ''}`
+        );
+        setShowAddMemberModal(false);
+        setShowContacts(false);
+        setSelectedContacts([]);
+        setInvitePhone('');
+        loadGroupData();
+      } else {
+        Alert.alert('Error', 'Failed to invite members');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to invite members');
+    } finally {
+      setAddingMember(false);
+    }
   };
 
   const handleAddMember = async () => {
@@ -209,12 +343,12 @@ export default function GroupDetailScreen({ route, navigation }) {
     }
   }, [activeTab]);
 
-  const handleSettleBalance = (balance) => {
+  const handleSettleBalance = useCallback((balance) => {
     setSelectedBalance(balance);
     setSettleAmount(balance.amount.toFixed(2));
     setSettleNotes('');
     setShowSettleModal(true);
-  };
+  }, []);
 
   const handleSubmitSettlement = async () => {
     const amount = parseFloat(settleAmount);
@@ -293,7 +427,7 @@ export default function GroupDetailScreen({ route, navigation }) {
     }
   };
 
-  const renderExpense = ({ item }) => {
+  const renderExpense = useCallback(({ item }) => {
     if (!item || !item._id) return null;
     
     const splits = item.splits || [];
@@ -303,56 +437,123 @@ export default function GroupDetailScreen({ route, navigation }) {
     
     return (
       <TouchableOpacity
-        style={styles.expenseBubble}
+        style={styles.expenseCard}
         onPress={() => navigation.navigate('EditExpense', { expenseId: item._id })}
         activeOpacity={0.8}
       >
-        <View style={[styles.bubbleContent, isPaidByMe && styles.bubbleContentMe]}>
-          <View style={styles.bubbleHeader}>
-            <View style={styles.bubbleAvatar}>
-              <Text style={styles.bubbleAvatarText}>{getInitials(paidByName)}</Text>
+        <View style={styles.expenseCardHeader}>
+          <View style={styles.expenseCardLeft}>
+            <View style={styles.expenseCardAvatar}>
+              <Text style={styles.expenseCardAvatarText}>{getInitials(paidByName)}</Text>
             </View>
-            <View style={styles.bubbleInfo}>
-              <Text style={styles.bubbleName}>{paidByName}</Text>
+            <View style={styles.expenseCardInfo}>
+              <Text style={styles.expenseCardName}>{paidByName}</Text>
               {item.createdAt && (
-                <Text style={styles.bubbleTime}>{formatTime(item.createdAt)}</Text>
+                <Text style={styles.expenseCardTime}>{formatDate(item.createdAt)} • {formatTime(item.createdAt)}</Text>
               )}
             </View>
           </View>
+          <View style={styles.expenseCardAmountContainer}>
+            <Text style={styles.expenseCardAmount}>₹{totalAmount.toFixed(2)}</Text>
+          </View>
+        </View>
+        
+        <View style={styles.expenseCardBody}>
+          <Text style={styles.expenseCardDescription}>{item.description || 'No description'}</Text>
           
-          <View style={styles.bubbleBody}>
-            <Text style={styles.bubbleDescription}>{item.description || 'No description'}</Text>
-            <View style={styles.bubbleAmountRow}>
-              <Text style={styles.bubbleAmount}>₹{totalAmount.toFixed(2)}</Text>
-              <Text style={styles.bubblePaidBy}>paid by {paidByName}</Text>
-            </View>
-            
-            {splits.length > 0 && (
-              <View style={styles.bubbleSplits}>
-                <Text style={styles.bubbleSplitsTitle}>Split:</Text>
-                {splits.map((split, index) => {
-                  const splitUser = split.userId;
-                  const userName = splitUser?.name || 'Unknown';
-                  const isPayer = item.paidBy?._id?.toString() === splitUser?._id?.toString();
-                  
-                  return (
-                    <View key={split.userId?._id || split.userId || index} style={styles.bubbleSplitItem}>
-                      <Text style={styles.bubbleSplitText}>
-                        {userName}: ₹{split.amount ? split.amount.toFixed(2) : '0.00'}
-                      </Text>
+          {splits.length > 0 && (
+            <View style={styles.expenseCardSplits}>
+              <View style={styles.expenseCardSplitsHeader}>
+                <Text style={styles.expenseCardSplitsTitle}>Split among {splits.length} {splits.length === 1 ? 'person' : 'people'}</Text>
+              </View>
+              {splits.map((split, index) => {
+                const splitUser = split.userId;
+                const userName = splitUser?.name || 'Unknown';
+                const isPayer = item.paidBy?._id?.toString() === splitUser?._id?.toString();
+                
+                return (
+                  <View key={split.userId?._id || split.userId || index} style={styles.expenseCardSplitItem}>
+                    <View style={styles.expenseCardSplitLeft}>
+                      <View style={styles.expenseCardSplitAvatar}>
+                        <Text style={styles.expenseCardSplitAvatarText}>{getInitials(userName)}</Text>
+                      </View>
+                      <Text style={styles.expenseCardSplitName}>{userName}</Text>
                       {isPayer && (
-                        <Icon name="check-circle" size={14} color={colors.primary} style={styles.splitPayerIcon} />
+                        <Icon name="check-circle" size={16} color={colors.primary} style={styles.expenseCardSplitPayerIcon} />
                       )}
                     </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
+                    <Text style={styles.expenseCardSplitAmount}>₹{split.amount ? split.amount.toFixed(2) : '0.00'}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
-  };
+  }, [user, navigation]);
+
+  // Calculate settlement hint (simplified balance count)
+  const settlementHint = useMemo(() => {
+    if (!optimizedBalances || optimizedBalances.length === 0 || dismissedSettlementHint) {
+      return null;
+    }
+    const simplifiedCount = optimizedBalances.length;
+    const normalCount = balances.length;
+    if (simplifiedCount < normalCount && simplifiedCount > 0) {
+      return {
+        simplifiedCount,
+        normalCount,
+        canSimplify: true,
+      };
+    }
+    return null;
+  }, [optimizedBalances, balances, dismissedSettlementHint]);
+
+  // Calculate group insights
+  const groupInsights = useMemo(() => {
+    if (!expenses || expenses.length === 0) {
+      return null;
+    }
+    
+    const totalSpend = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    
+    // Calculate top payer
+    const payerMap = {};
+    expenses.forEach(exp => {
+      const payerId = exp.paidBy?._id?.toString() || exp.paidBy?.toString();
+      if (payerId) {
+        payerMap[payerId] = (payerMap[payerId] || 0) + (exp.amount || 0);
+      }
+    });
+    
+    const topPayerEntry = Object.entries(payerMap).sort((a, b) => b[1] - a[1])[0];
+    const topPayer = topPayerEntry 
+      ? group?.members?.find(m => {
+          const memberId = m.userId?._id?.toString() || m.userId?.toString();
+          return memberId === topPayerEntry[0];
+        })
+      : null;
+    
+    // Calculate highest debtor
+    let highestDebtor = null;
+    let highestDebt = 0;
+    balances.forEach(balance => {
+      const debt = balance.amount || 0;
+      if (debt > highestDebt) {
+        highestDebt = debt;
+        highestDebtor = balance.from;
+      }
+    });
+    
+    return {
+      totalSpend,
+      topPayer: topPayer?.userId || topPayer,
+      topPayerAmount: topPayerEntry ? topPayerEntry[1] : 0,
+      highestDebtor,
+      highestDebt,
+    };
+  }, [expenses, balances, group]);
 
   const tabs = [
     { key: 'expenses', label: 'Expenses', badge: expensesTotal > 0 ? expensesTotal : null },
@@ -377,11 +578,14 @@ export default function GroupDetailScreen({ route, navigation }) {
       }
       ListEmptyComponent={
         !expensesLoading ? (
-          <View style={styles.emptyContainer}>
-            <Icon name="receipt" size={48} color={colors.iconSecondary} />
-            <Text style={styles.emptyText}>No expenses yet</Text>
-            <Text style={styles.emptySubtext}>Add your first expense to get started</Text>
-          </View>
+          <EmptyState
+            icon="receipt"
+            title="No expenses yet"
+            subtitle="Add your first expense to get started"
+            actionLabel="Add Expense"
+            onAction={() => navigation.navigate('AddExpense', { groupId })}
+            style={styles.emptyStateContainer}
+          />
         ) : (
           <View style={styles.emptyContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -769,6 +973,82 @@ export default function GroupDetailScreen({ route, navigation }) {
 
       <TabView tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
+      {/* Smart Settlement Hint Banner */}
+      {settlementHint && !dismissedSettlementHint && (
+        <View style={styles.settlementHintBanner}>
+          <View style={styles.settlementHintContent}>
+            <Icon name="lightbulb-on" size={20} color={colors.warning} style={styles.settlementHintIcon} />
+            <View style={styles.settlementHintTextContainer}>
+              <Text style={styles.settlementHintText}>
+                Only {settlementHint.simplifiedCount} payment{settlementHint.simplifiedCount !== 1 ? 's' : ''} needed to settle all balances
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.settlementHintViewButton}
+              onPress={() => {
+                setActiveTab(3); // Navigate to balances tab
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.settlementHintViewText}>View</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.settlementHintDismiss}
+              onPress={() => setDismissedSettlementHint(true)}
+              activeOpacity={0.7}
+            >
+              <Icon name="close" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Group Insights Section */}
+      {activeTab === 0 && groupInsights && (
+        <View style={styles.insightsContainer}>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={[
+              {
+                key: 'total',
+                label: 'Total Spend',
+                value: `₹${groupInsights.totalSpend.toFixed(0)}`,
+                icon: 'cash-multiple',
+                color: colors.primary,
+              },
+              {
+                key: 'payer',
+                label: 'Top Payer',
+                value: groupInsights.topPayer?.name || 'N/A',
+                icon: 'account-star',
+                color: colors.balancePositive,
+              },
+              {
+                key: 'debtor',
+                label: 'Highest Debt',
+                value: `₹${groupInsights.highestDebt.toFixed(0)}`,
+                icon: 'account-alert',
+                color: colors.balanceNegative,
+              },
+            ]}
+            renderItem={({ item }) => (
+              <View style={styles.insightCard}>
+                <View style={[styles.insightIconContainer, { backgroundColor: `${item.color}15` }]}>
+                  <Icon name={item.icon} size={24} color={item.color} />
+                </View>
+                <Text style={styles.insightLabel}>{item.label}</Text>
+                <Text style={[styles.insightValue, { color: item.color }]} numberOfLines={1}>
+                  {item.value}
+                </Text>
+              </View>
+            )}
+            keyExtractor={(item) => item.key}
+            contentContainerStyle={styles.insightsScrollContent}
+          />
+        </View>
+      )}
+
       {activeTab === 0 && renderExpensesTab()}
       {activeTab === 1 && renderMembersTab()}
       {activeTab === 2 && renderSettlementsTab()}
@@ -976,80 +1256,207 @@ export default function GroupDetailScreen({ route, navigation }) {
         visible={showAddMemberModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowAddMemberModal(false)}
+        onRequestClose={() => {
+          setShowAddMemberModal(false);
+          setShowContacts(false);
+          setSelectedContacts([]);
+          setInviteEmail('');
+          setInvitePhone('');
+        }}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Invite Member</Text>
-            <Text style={styles.modalSubtitle}>
-              Enter email or phone to invite a member to this group
-            </Text>
-
-            <View style={styles.toggleContainer}>
+          <View style={[styles.modalContent, showContacts && styles.modalContentLarge]}>
+            <View style={styles.modalHeader}>
               <TouchableOpacity
-                style={[styles.toggle, useEmailForInvite && styles.toggleActive]}
-                onPress={() => setUseEmailForInvite(true)}
-              >
-                <Text style={[styles.toggleText, useEmailForInvite && styles.toggleTextActive]}>
-                  Email
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.toggle, !useEmailForInvite && styles.toggleActive]}
-                onPress={() => setUseEmailForInvite(false)}
-              >
-                <Text style={[styles.toggleText, !useEmailForInvite && styles.toggleTextActive]}>
-                  Phone
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            {useEmailForInvite ? (
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Enter email address"
-                value={inviteEmail}
-                onChangeText={setInviteEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoFocus
-              />
-            ) : (
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Enter phone number"
-                value={invitePhone}
-                onChangeText={setInvitePhone}
-                keyboardType="phone-pad"
-                maxLength={10}
-                autoFocus
-              />
-            )}
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
-                  setShowAddMemberModal(false);
-                  setInviteEmail('');
-                  setInvitePhone('');
+                  if (showContacts) {
+                    setShowContacts(false);
+                    setSelectedContacts([]);
+                  } else {
+                    setShowAddMemberModal(false);
+                    setInviteEmail('');
+                    setInvitePhone('');
+                  }
                 }}
-                disabled={addingMember}
+                style={styles.modalBackButton}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Icon name={showContacts ? "arrow-left" : "close"} size={24} color={colors.textPrimary} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.addButton, ((useEmailForInvite && !inviteEmail.trim()) || (!useEmailForInvite && !invitePhone.trim()) || addingMember) && styles.buttonDisabled]}
-                onPress={handleAddMember}
-                disabled={addingMember || (useEmailForInvite && !inviteEmail.trim()) || (!useEmailForInvite && !invitePhone.trim())}
-              >
-                {addingMember ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.addButtonText}>Add</Text>
-                )}
-              </TouchableOpacity>
+              <Text style={styles.modalTitle}>
+                {showContacts ? 'Select Contacts' : 'Invite Member'}
+              </Text>
+              <View style={{ width: 24 }} />
             </View>
+
+            {!showContacts ? (
+              <>
+                <Text style={styles.modalSubtitle}>
+                  Choose from contacts or enter manually
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.contactsButton}
+                  onPress={handleShowContacts}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="account-multiple" size={24} color={colors.primary} />
+                  <Text style={styles.contactsButtonText}>Select from Contacts</Text>
+                  <Icon name="chevron-right" size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+
+                <View style={styles.dividerContainer}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>OR</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                <View style={styles.toggleContainer}>
+                  <TouchableOpacity
+                    style={[styles.toggle, useEmailForInvite && styles.toggleActive]}
+                    onPress={() => setUseEmailForInvite(true)}
+                  >
+                    <Text style={[styles.toggleText, useEmailForInvite && styles.toggleTextActive]}>
+                      Email
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toggle, !useEmailForInvite && styles.toggleActive]}
+                    onPress={() => setUseEmailForInvite(false)}
+                  >
+                    <Text style={[styles.toggleText, !useEmailForInvite && styles.toggleTextActive]}>
+                      Phone
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {useEmailForInvite ? (
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Enter email address"
+                    value={inviteEmail}
+                    onChangeText={setInviteEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoFocus
+                  />
+                ) : (
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Enter phone number"
+                    value={invitePhone}
+                    onChangeText={setInvitePhone}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    autoFocus
+                  />
+                )}
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => {
+                      setShowAddMemberModal(false);
+                      setInviteEmail('');
+                      setInvitePhone('');
+                    }}
+                    disabled={addingMember}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.addButton, ((useEmailForInvite && !inviteEmail.trim()) || (!useEmailForInvite && !invitePhone.trim()) || addingMember) && styles.buttonDisabled]}
+                    onPress={handleAddMember}
+                    disabled={addingMember || (useEmailForInvite && !inviteEmail.trim()) || (!useEmailForInvite && !invitePhone.trim())}
+                  >
+                    {addingMember ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={styles.addButtonText}>Add</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                {contactsLoading ? (
+                  <View style={styles.contactsLoadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={styles.contactsLoadingText}>Loading contacts...</Text>
+                  </View>
+                ) : contacts.length === 0 ? (
+                  <View style={styles.contactsEmptyContainer}>
+                    <Icon name="account-off" size={64} color={colors.textTertiary} />
+                    <Text style={styles.contactsEmptyText}>No contacts found</Text>
+                    <Text style={styles.contactsEmptySubtext}>
+                      Make sure you have contacts with phone numbers in your device
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <View style={styles.selectedContactsInfo}>
+                      <Text style={styles.selectedContactsText}>
+                        {selectedContacts.length} contact{selectedContacts.length !== 1 ? 's' : ''} selected
+                      </Text>
+                    </View>
+                    <FlatList
+                      data={contacts}
+                      keyExtractor={(item) => item.id}
+                      style={styles.contactsList}
+                      renderItem={({ item }) => {
+                        const isSelected = selectedContacts.includes(item.id);
+                        return (
+                          <TouchableOpacity
+                            style={[styles.contactItem, isSelected && styles.contactItemSelected]}
+                            onPress={() => toggleContactSelection(item.id)}
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.contactItemContent}>
+                              <View style={[styles.contactAvatar, isSelected && styles.contactAvatarSelected]}>
+                                <Text style={styles.contactAvatarText}>
+                                  {getInitials(item.name)}
+                                </Text>
+                              </View>
+                              <View style={styles.contactInfo}>
+                                <Text style={styles.contactName}>{item.name}</Text>
+                                <Text style={styles.contactPhone}>{item.phoneNumbers[0]}</Text>
+                              </View>
+                            </View>
+                            {isSelected && (
+                              <Icon name="check-circle" size={24} color={colors.primary} />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      }}
+                    />
+                    <View style={styles.modalActions}>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.cancelButton]}
+                        onPress={() => {
+                          setShowContacts(false);
+                          setSelectedContacts([]);
+                        }}
+                        disabled={addingMember}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.addButton, (selectedContacts.length === 0 || addingMember) && styles.buttonDisabled]}
+                        onPress={handleInviteSelectedContacts}
+                        disabled={selectedContacts.length === 0 || addingMember}
+                      >
+                        {addingMember ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <Text style={styles.addButtonText}>
+                            Invite ({selectedContacts.length})
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -1782,99 +2189,128 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: 0,
   },
-  expenseBubble: {
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  bubbleContent: {
-    backgroundColor: colors.backgroundSecondary,
+  expenseCard: {
+    backgroundColor: colors.card,
     borderRadius: borderRadius.md,
     padding: spacing.md,
-    maxWidth: '85%',
-    alignSelf: 'flex-start',
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.divider,
   },
-  bubbleContentMe: {
-    backgroundColor: colors.primaryLight,
-    alignSelf: 'flex-end',
+  expenseCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
   },
-  bubbleHeader: {
+  expenseCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    flex: 1,
   },
-  bubbleAvatar: {
-    width: 32,
-    height: 32,
+  expenseCardAvatar: {
+    width: 40,
+    height: 40,
     borderRadius: borderRadius.round,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
   },
-  bubbleAvatarText: {
-    ...typography.caption,
+  expenseCardAvatarText: {
+    ...typography.bodySmall,
     fontWeight: '600',
     color: colors.background,
   },
-  bubbleInfo: {
+  expenseCardInfo: {
     flex: 1,
   },
-  bubbleName: {
-    ...typography.bodySmall,
+  expenseCardName: {
+    ...typography.body,
     fontWeight: '600',
     color: colors.textPrimary,
+    marginBottom: 2,
   },
-  bubbleTime: {
+  expenseCardTime: {
     ...typography.caption,
-    color: colors.textTertiary,
-    marginTop: 2,
-  },
-  bubbleBody: {
-    marginTop: spacing.xs,
-  },
-  bubbleDescription: {
-    ...typography.body,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  bubbleAmountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  bubbleAmount: {
-    ...typography.h3,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginRight: spacing.sm,
-  },
-  bubblePaidBy: {
-    ...typography.bodySmall,
     color: colors.textSecondary,
   },
-  bubbleSplits: {
+  expenseCardAmountContainer: {
+    alignItems: 'flex-end',
+  },
+  expenseCardAmount: {
+    ...typography.h3,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  expenseCardBody: {
+    marginTop: spacing.xs,
+  },
+  expenseCardDescription: {
+    ...typography.body,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+    lineHeight: 22,
+  },
+  expenseCardSplits: {
     marginTop: spacing.sm,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.divider,
   },
-  bubbleSplitsTitle: {
-    ...typography.caption,
+  expenseCardSplitsHeader: {
+    marginBottom: spacing.sm,
+  },
+  expenseCardSplitsTitle: {
+    ...typography.bodySmall,
     fontWeight: '600',
     color: colors.textSecondary,
-    marginBottom: spacing.xs,
   },
-  bubbleSplitItem: {
+  expenseCardSplitItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  expenseCardSplitLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    flex: 1,
   },
-  bubbleSplitText: {
+  expenseCardSplitAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.round,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  expenseCardSplitAvatarText: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.primaryDark,
+    fontSize: 10,
+  },
+  expenseCardSplitName: {
     ...typography.bodySmall,
     color: colors.textPrimary,
+    flex: 1,
   },
-  splitPayerIcon: {
+  expenseCardSplitPayerIcon: {
     marginLeft: spacing.xs,
+  },
+  expenseCardSplitAmount: {
+    ...typography.bodySmall,
+    fontWeight: '600',
+    color: colors.textPrimary,
   },
   expenseCard: {
     backgroundColor: '#fff',
@@ -2147,6 +2583,224 @@ const styles = StyleSheet.create({
   memberOptionTextSelected: {
     color: colors.primaryDark,
     fontWeight: '600',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  modalBackButton: {
+    padding: spacing.xs,
+  },
+  modalContentLarge: {
+    maxHeight: '80%',
+    height: '80%',
+  },
+  contactsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  contactsButtonText: {
+    flex: 1,
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.divider,
+  },
+  dividerText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  contactsLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  contactsLoadingText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+  },
+  contactsEmptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  contactsEmptyText: {
+    ...typography.h3,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+  },
+  contactsEmptySubtext: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  selectedContactsInfo: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+  },
+  selectedContactsText: {
+    ...typography.bodySmall,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  contactsList: {
+    flex: 1,
+    marginBottom: spacing.md,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  contactItemSelected: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary,
+  },
+  contactItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  contactAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.round,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  contactAvatarSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primaryDark,
+  },
+  contactAvatarText: {
+    ...typography.body,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  contactInfo: {
+    flex: 1,
+  },
+  contactName: {
+    ...typography.body,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs / 2,
+  },
+  contactPhone: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+  },
+  settlementHintBanner: {
+    backgroundColor: '#FFF9E6',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  settlementHintContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  settlementHintIcon: {
+    marginRight: spacing.xs,
+  },
+  settlementHintTextContainer: {
+    flex: 1,
+  },
+  settlementHintText: {
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+  settlementHintViewButton: {
+    backgroundColor: colors.warning,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  settlementHintViewText: {
+    ...typography.bodySmall,
+    color: colors.background,
+    fontWeight: '600',
+  },
+  settlementHintDismiss: {
+    padding: spacing.xs,
+  },
+  insightsContainer: {
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+    paddingVertical: spacing.md,
+  },
+  insightsScrollContent: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.md,
+  },
+  insightCard: {
+    width: 140,
+    padding: spacing.md,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  insightIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.round,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  insightLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  insightValue: {
+    ...typography.body,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  emptyStateContainer: {
+    paddingVertical: spacing.xl,
   },
 });
 

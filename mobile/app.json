@@ -1,39 +1,56 @@
 {
   "expo": {
     "name": "Split Buddy",
-    "slug": "splitbuddy-app",
+    "slug": "split-buddy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "assetBundlePatterns": [
-      "**/*"
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "networkSecurityConfig": "./android/app/src/main/res/xml/network_security_config.xml"
+          }
+        }
+      ],
+      "./plugins/with-network-security.js",
+      "expo-contacts",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#00A86B",
+          "sounds": []
+        }
+      ]
     ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.splitbuddy.app"
-    },
     "android": {
+      "package": "com.nishadasuya786.splitbuddy",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FFFFFF"
       },
-      "package": "com.splitbuddy.app",
-      "permissions": [
-        "INTERNET",
-        "ACCESS_NETWORK_STATE"
-      ],
-      "allowBackup": true,
+            "permissions": [
+              "INTERNET",
+              "ACCESS_NETWORK_STATE",
+              "READ_CONTACTS",
+              "CAMERA",
+              "READ_EXTERNAL_STORAGE",
+              "WRITE_EXTERNAL_STORAGE"
+            ],
       "usesCleartextTraffic": true
     },
+    "ios": {
+      "bundleIdentifier": "com.nishadasuya786.splitbuddy"
+    },
+    "owner": "nishadasuya786",
     "extra": {
       "eas": {
-        "projectId": "90f35f31-dd41-4b63-be5e-7ef4936ff3b1"
+        "projectId": "2a205468-d6d8-4228-9d2e-c43f02a76759"
       }
     }
   }

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { storage } from '../utils/storage';
 import { authAPI } from '../services/api';
+import { registerFCMToken, removeFCMToken } from '../services/notificationService';
 
 const AuthContext = createContext({});
 
@@ -45,6 +46,16 @@ export const AuthProvider = ({ children }) => {
       await storage.setItem('refreshToken', refreshToken);
       console.log('Tokens stored successfully');
       setUser(userData);
+      
+      // Register FCM token for notifications
+      setTimeout(async () => {
+        try {
+          await registerFCMToken();
+        } catch (error) {
+          console.error('Error registering FCM token:', error);
+          // Don't fail login if notification registration fails
+        }
+      }, 1000);
     } catch (error) {
       console.error('Error storing tokens:', error);
       throw error;
@@ -54,6 +65,14 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     console.log('=== LOGOUT STARTED ===');
     try {
+      // Remove FCM token
+      try {
+        await removeFCMToken();
+        console.log('✓ FCM token removed');
+      } catch (e) {
+        console.warn('Warning: Error removing FCM token:', e);
+      }
+      
       // Clear tokens from storage
       console.log('Removing tokens from storage...');
       try {

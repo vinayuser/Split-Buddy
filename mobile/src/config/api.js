@@ -3,8 +3,9 @@ import { Platform } from 'react-native';
 import { storage } from '../utils/storage';
 
 // Production API URL
-const API_BASE_URL = 'http://13.232.231.52:3010/api';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/api';
 
+console.log('API_BASE_URL:', API_BASE_URL);
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
