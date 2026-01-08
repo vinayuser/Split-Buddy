@@ -1,5 +1,6 @@
 const Group = require('../models/Group');
 const Subscription = require('../models/Subscription');
+const User = require('../models/User');
 
 // Check if user has active subscription (for creating expenses)
 const checkSubscriptionForWrite = async (req, res, next) => {
@@ -30,17 +31,35 @@ const checkSubscriptionForWrite = async (req, res, next) => {
     }
 
     // Check trial period
-    const user = req.user;
-    const trialEndDate = new Date(user.createdAt);
-    trialEndDate.setDate(trialEndDate.getDate() + 7);
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
     
-    if (new Date() <= trialEndDate) {
+    const isTrialActive = user.isTrialActive();
+    
+    if (isTrialActive) {
+      // Update user status to trial if not already set
+      if (user.subscriptionStatus !== 'trial') {
+        user.subscriptionStatus = 'trial';
+        await user.save();
+      }
       return next();
+    } else {
+      // Trial expired - update user status
+      if (user.subscriptionStatus !== 'expired') {
+        user.subscriptionStatus = 'expired';
+        await user.save();
+      }
     }
 
     return res.status(403).json({ 
       success: false, 
-      message: 'Subscription required. Please subscribe to continue using the app.' 
+      message: 'Your 7-day free trial has expired. Please subscribe to continue using the app.',
+      trialExpired: true
     });
   } catch (error) {
     console.error('Subscription check error:', error);

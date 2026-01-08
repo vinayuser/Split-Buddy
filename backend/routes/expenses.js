@@ -2,8 +2,10 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Expense = require('../models/Expense');
 const Group = require('../models/Group');
+const User = require('../models/User');
 const { authenticate } = require('../middleware/auth');
 const { checkSubscriptionForWrite, checkSubscriptionForRead } = require('../middleware/subscription');
+const { sendNotificationToMultiple } = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -168,6 +170,47 @@ router.post('/', authenticate, checkSubscriptionForWrite, [
     await expense.populate('paidBy', 'name avatar');
     await expense.populate('splits.userId', 'name avatar');
     await expense.populate('createdBy', 'name');
+
+    // Send notifications to group members (except the creator)
+    try {
+      const group = await Group.findById(groupId).populate('members.userId', 'name fcmToken');
+      const creatorId = userId.toString();
+      
+      // Get all member IDs who should receive notification
+      const memberIds = group.members
+        .map(m => {
+          const memberId = m.userId && (m.userId._id ? m.userId._id.toString() : m.userId.toString());
+          return memberId;
+        })
+        .filter(memberId => memberId && memberId !== creatorId);
+
+      // Get FCM tokens for all members
+      const users = await User.find({ _id: { $in: memberIds }, fcmToken: { $ne: null } });
+      const fcmTokens = users.map(u => u.fcmToken).filter(token => token);
+
+      if (fcmTokens.length > 0) {
+        const payerName = expense.paidBy?.name || 'Someone';
+        const groupName = group.name || 'Group';
+        
+        await sendNotificationToMultiple(
+          fcmTokens,
+          `New expense in ${groupName}`,
+          `${payerName} added ₹${expense.amount.toFixed(2)} - ${expense.description}`,
+          {
+            type: 'expense_added',
+            expenseId: expense._id.toString(),
+            groupId: groupId.toString(),
+            amount: expense.amount.toString(),
+            description: expense.description,
+            payerName: payerName,
+            groupName: groupName,
+          }
+        );
+      }
+    } catch (notificationError) {
+      // Don't fail the request if notification fails
+      console.error('Error sending notifications:', notificationError);
+    }
 
     res.status(201).json({
       success: true,

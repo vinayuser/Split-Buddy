@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .nav {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .nav a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .nav a.active {
+            background: rgba(255,255,255,0.3);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Split Buddy Admin Panel</h1>
+        <nav class="nav">
+            <a href="/admin/dashboard" class="active">Dashboard</a>
+            <a href="/admin/banners">Banners</a>
+            <a href="/admin/notifications">Notifications</a>
+            <a href="/admin/users">Users</a>
+            <a href="/admin/subscriptions">Subscriptions</a>
+            <a href="/admin/logout" style="margin-left: auto;">Logout</a>
+        </nav>
+    </div>
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Users</h3>
+                <div class="value"><%= totalUsers || 0 %></div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Users</h3>
+                <div class="value"><%= activeUsers || 0 %></div>
+            </div>
+            <div class="stat-card">
+                <h3>Trial Users</h3>
+                <div class="value"><%= trialUsers || 0 %></div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Groups</h3>
+                <div class="value"><%= totalGroups || 0 %></div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Banners</h3>
+                <div class="value"><%= totalBanners || 0 %></div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Banners</h3>
+                <div class="value"><%= activeBanners || 0 %></div>
+            </div>
+        </div>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-error"><%= error %></div>
+        <% } %>
+
+        <div class="card">
+            <h2>Quick Actions</h2>
+            <p style="margin-top: 1rem;">
+                <a href="/admin/banners" style="color: #667eea; text-decoration: none; margin-right: 1rem;">Manage Banners</a>
+                <a href="/admin/notifications" style="color: #667eea; text-decoration: none; margin-right: 1rem;">Send Notification</a>
+                <a href="/admin/users" style="color: #667eea; text-decoration: none;">Manage Users</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

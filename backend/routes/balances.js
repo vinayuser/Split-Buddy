@@ -111,5 +111,105 @@ router.get('/group/:groupId/user', authenticate, checkSubscriptionForRead, async
   }
 });
 
-module.exports = router;
+// Get friend balances across all groups
+router.get('/friends', authenticate, checkSubscriptionForRead, async (req, res) => {
+  try {
+    const userId = req.user._id;
 
+    // Get all groups where user is a member
+    const groups = await Group.find({
+      'members.userId': userId,
+      isArchived: false
+    }).populate('members.userId', 'name avatar phone email');
+
+    if (groups.length === 0) {
+      return res.json({
+        success: true,
+        friends: []
+      });
+    }
+
+    const groupIds = groups.map(g => g._id);
+    
+    // Calculate balances for all groups
+    const friendBalances = {}; // { friendId: { user, netBalance, groups: [] } }
+    
+    for (const group of groups) {
+      const balances = await calculateBalances(group._id);
+      
+      // Process each balance to find relationships with current user
+      balances.forEach(balance => {
+        const fromId = balance.from.toString();
+        const toId = balance.to.toString();
+        const userIdStr = userId.toString();
+        
+        let friendId = null;
+        let amount = 0;
+        
+        // If user owes someone
+        if (fromId === userIdStr) {
+          friendId = toId;
+          amount = -balance.amount; // Negative because user owes
+        }
+        // If someone owes user
+        else if (toId === userIdStr) {
+          friendId = fromId;
+          amount = balance.amount; // Positive because user is owed
+        }
+        
+        if (friendId && friendId !== userIdStr) {
+          // Find friend user details from group members
+          const friendMember = group.members.find(m => {
+            const memberId = m.userId && (m.userId._id ? m.userId._id.toString() : m.userId.toString());
+            return memberId === friendId;
+          });
+          
+          if (friendMember && friendMember.userId) {
+            const friend = friendMember.userId;
+            const friendIdStr = friend._id ? friend._id.toString() : friend.toString();
+            
+            if (!friendBalances[friendIdStr]) {
+              friendBalances[friendIdStr] = {
+                user: {
+                  _id: friend._id || friend,
+                  name: friend.name || 'Unknown',
+                  avatar: friend.avatar || null,
+                  phone: friend.phone || null,
+                  email: friend.email || null,
+                },
+                netBalance: 0,
+                groups: []
+              };
+            }
+            
+            friendBalances[friendIdStr].netBalance += amount;
+            friendBalances[friendIdStr].groups.push({
+              groupId: group._id,
+              groupName: group.name,
+              amount: amount
+            });
+          }
+        }
+      });
+    }
+    
+    // Convert to array and filter out zero balances
+    const friends = Object.values(friendBalances)
+      .filter(friend => Math.abs(friend.netBalance) > 0.01)
+      .map(friend => ({
+        ...friend,
+        netBalance: Math.round(friend.netBalance * 100) / 100 // Round to 2 decimals
+      }))
+      .sort((a, b) => Math.abs(b.netBalance) - Math.abs(a.netBalance)); // Sort by absolute balance
+    
+    res.json({
+      success: true,
+      friends: friends
+    });
+  } catch (error) {
+    console.error('Get friend balances error:', error);
+    res.status(500).json({ success: false, message: 'Failed to get friend balances' });
+  }
+});
+
+module.exports = router;

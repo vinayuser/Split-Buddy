@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "fe2bffc4-f2dd-4fff-b9e9-2c19660a0f6f"
+      }
+    },
+    "android": {
+      "package": "com.vinaydasuya786.splitwiseapp"
+    }
+  }
+}

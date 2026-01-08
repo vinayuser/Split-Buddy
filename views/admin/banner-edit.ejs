@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Banner - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .nav {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        .nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .nav a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+            margin-right: 0.5rem;
+        }
+        .btn:hover {
+            background: #5568d3;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .form-group input[type="file"] {
+            padding: 0.5rem;
+        }
+        #imagePreview {
+            margin-top: 1rem;
+        }
+        #previewImg {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Split Buddy Admin Panel</h1>
+        <nav class="nav">
+            <a href="/admin/dashboard">Dashboard</a>
+            <a href="/admin/banners">Banners</a>
+            <a href="/admin/notifications">Notifications</a>
+            <a href="/admin/users">Users</a>
+            <a href="/admin/subscriptions">Subscriptions</a>
+            <a href="/admin/logout" style="margin-left: auto;">Logout</a>
+        </nav>
+    </div>
+    <div class="container">
+        <div class="card">
+            <h2>Edit Banner</h2>
+            <form method="POST" action="/admin/banners/<%= banner._id %>" enctype="multipart/form-data" style="margin-top: 1rem;">
+                <div class="form-group">
+                    <label for="title">Title *</label>
+                    <input type="text" id="title" name="title" value="<%= banner.title %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Description *</label>
+                    <textarea id="description" name="description" required><%= banner.description %></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="image">Image</label>
+                    <% if (banner.image) { %>
+                        <div style="margin-bottom: 0.5rem;">
+                            <p style="color: #666; font-size: 0.875rem;">Current image:</p>
+                            <img src="<%= banner.image %>" alt="Current banner" style="max-width: 200px; max-height: 200px; border-radius: 4px; border: 1px solid #ddd;">
+                        </div>
+                    <% } %>
+                    <input type="file" id="image" name="image" accept="image/*" onchange="previewImage(this)">
+                    <small style="color: #666; display: block; margin-top: 0.25rem;">
+                        Select a new image file to replace current image (JPG, PNG, etc.)
+                    </small>
+                    <div id="imagePreview" style="margin-top: 1rem; display: none;">
+                        <p style="color: #666; font-size: 0.875rem; margin-bottom: 0.5rem;">New image preview:</p>
+                        <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 4px; border: 1px solid #ddd;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="action">Action Button Text</label>
+                    <input type="text" id="action" name="action" value="<%= banner.action || 'Learn More' %>">
+                </div>
+                <div class="form-group">
+                    <label for="actionUrl">Action URL (optional)</label>
+                    <input type="url" id="actionUrl" name="actionUrl" value="<%= banner.actionUrl || '' %>">
+                </div>
+                <div class="form-group">
+                    <label for="order">Order (lower numbers appear first)</label>
+                    <input type="number" id="order" name="order" value="<%= banner.order || 0 %>">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="isActive" <%= banner.isActive ? 'checked' : '' %>> Active
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="endDate">End Date (optional)</label>
+                    <input type="datetime-local" id="endDate" name="endDate" value="<%= banner.endDate ? new Date(banner.endDate).toISOString().slice(0, 16) : '' %>">
+                </div>
+                <button type="submit" class="btn">Update Banner</button>
+                <a href="/admin/banners" class="btn" style="background: #6c757d;">Cancel</a>
+            </form>
+        </div>
+    </div>
+    <script>
+        function previewImage(input) {
+            const preview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImg');
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -61,6 +61,12 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: 500,
     default: null
+  },
+  fcmToken: {
+    type: String,
+    default: null,
+    index: true,
+    sparse: true
   }
 }, {
   timestamps: true

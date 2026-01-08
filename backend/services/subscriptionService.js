@@ -89,23 +89,55 @@ const checkSubscriptionStatus = async (userId) => {
     status: 'active'
   }).sort({ endDate: -1 });
   
-  if (subscriptions.length === 0) {
-    const user = await User.findById(userId);
-    if (user && user.isTrialActive()) {
-      return { status: 'trial', active: true };
-    }
+  const user = await User.findById(userId);
+  if (!user) {
     return { status: 'expired', active: false };
   }
   
+  // Check for active paid subscription first
   const activeSubscription = subscriptions.find(sub => sub.isActive());
   
   if (activeSubscription) {
+    // Update user status if needed
+    if (user.subscriptionStatus !== 'active') {
+      user.subscriptionStatus = 'active';
+      await user.save();
+    }
+    
     return {
       status: 'active',
       active: true,
       endDate: activeSubscription.endDate,
       planType: activeSubscription.planType
     };
+  }
+  
+  // Check trial status
+  const isTrialActive = user.isTrialActive();
+  if (isTrialActive) {
+    const trialEndDate = new Date(user.createdAt);
+    trialEndDate.setDate(trialEndDate.getDate() + 7);
+    const now = new Date();
+    const daysRemaining = Math.ceil((trialEndDate - now) / (1000 * 60 * 60 * 24));
+    
+    // Update user status if needed
+    if (user.subscriptionStatus !== 'trial') {
+      user.subscriptionStatus = 'trial';
+      await user.save();
+    }
+    
+    return {
+      status: 'trial',
+      active: true,
+      trialEndDate: trialEndDate,
+      daysRemaining: Math.max(0, daysRemaining)
+    };
+  }
+  
+  // Trial expired - update user status
+  if (user.subscriptionStatus !== 'expired') {
+    user.subscriptionStatus = 'expired';
+    await user.save();
   }
   
   // Check if user is in group with active subscription
