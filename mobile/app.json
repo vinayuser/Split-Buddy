@@ -21,7 +21,6 @@
         }
       ],
       "./plugins/with-network-security.js",
-      "./plugins/with-build-properties.js",
       "expo-contacts",
       [
         "expo-notifications",
