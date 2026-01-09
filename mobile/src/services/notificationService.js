@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { notificationAPI } from './api';
+import { storage } from '../utils/storage';
 
 // Configure notification handler
 Notifications.setNotificationHandler({
@@ -54,30 +55,75 @@ export const requestNotificationPermissions = async () => {
 // Register FCM token with backend
 export const registerFCMToken = async () => {
   try {
+    console.log('=== FCM TOKEN REGISTRATION STARTED ===');
+    
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
+      console.warn('Notification permissions not granted');
       return null;
     }
 
+    console.log('Getting Expo Push Token...');
     const token = await Notifications.getExpoPushTokenAsync({
       projectId: '2a205468-d6d8-4228-9d2e-c43f02a76759', // From app.json
     });
 
+    console.log('Token received:', token);
+
     if (token && token.data) {
+      const tokenValue = token.data;
+      console.log('Token value:', tokenValue.substring(0, 50) + '...');
+      console.log('Token length:', tokenValue.length);
+      
       // Register token with backend
       try {
-        await notificationAPI.registerToken(token.data);
-        console.log('FCM token registered successfully');
+        // Verify auth token is available before making API call
+        const authToken = await storage.getItem('authToken');
+        if (!authToken) {
+          console.error('ERROR: No auth token available. Cannot register FCM token.');
+          console.error('This usually means the user is not logged in or token was not saved.');
+          return null;
+        }
+        console.log('✓ Auth token verified, proceeding with FCM token registration');
+        
+        console.log('Sending token to backend...');
+        const response = await notificationAPI.registerToken(tokenValue);
+        console.log('Backend response:', response);
+        
+        if (response.success) {
+          console.log('✓ FCM token registered successfully in database');
+          if (response.subscriptions) {
+            console.log('Topic subscriptions:', response.subscriptions);
+          }
+        } else {
+          console.error('Backend returned error:', response.message);
+        }
       } catch (error) {
         console.error('Error registering token with backend:', error);
+        if (error.response) {
+          console.error('Response status:', error.response.status);
+          console.error('Response data:', error.response.data);
+          if (error.response.status === 401) {
+            console.error('ERROR: Authentication failed. User may not be logged in.');
+          }
+        } else if (error.request) {
+          console.error('No response received from server:', error.request);
+        } else {
+          console.error('Error setting up request:', error.message);
+        }
+        // Don't throw - allow app to continue even if registration fails
       }
       
-      return token.data;
+      return tokenValue;
+    } else {
+      console.warn('No token data received from Expo');
     }
 
+    console.log('=== FCM TOKEN REGISTRATION COMPLETED ===');
     return null;
   } catch (error) {
     console.error('Error getting FCM token:', error);
+    console.error('Error details:', error.message, error.stack);
     return null;
   }
 };

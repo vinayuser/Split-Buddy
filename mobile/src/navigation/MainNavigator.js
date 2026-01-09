@@ -16,6 +16,8 @@ import ActivityScreen from '../screens/activities/ActivityScreen';
 import FriendsScreen from '../screens/friends/FriendsScreen';
 import SubscriptionScreen from '../screens/subscription/SubscriptionScreen';
 import FAQScreen from '../screens/faq/FAQScreen';
+import TransactionListScreen from '../screens/transactions/TransactionListScreen';
+import ChatScreen from '../screens/chat/ChatScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -72,6 +74,16 @@ function HomeStack() {
         name="FAQ" 
         component={FAQScreen}
         options={{ title: 'FAQ' }}
+      />
+      <Stack.Screen 
+        name="TransactionList" 
+        component={TransactionListScreen}
+        options={{ title: 'Transactions' }}
+      />
+      <Stack.Screen 
+        name="Chat" 
+        component={ChatScreen}
+        options={{ title: 'Group Chat' }}
       />
     </Stack.Navigator>
   );

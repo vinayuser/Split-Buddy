@@ -112,7 +112,7 @@ router.post('/', authenticate, checkSubscriptionForWrite, [
       });
     }
 
-    const { groupId, amount, description, paidBy, splitType, splits } = req.body;
+    const { groupId, amount, description, paidBy, splitType, splits, image } = req.body;
     const userId = req.user._id;
 
     const group = await Group.findById(groupId);
@@ -164,7 +164,8 @@ router.post('/', authenticate, checkSubscriptionForWrite, [
         userId: s.userId,
         amount: parseFloat(s.amount)
       })),
-      createdBy: userId
+      createdBy: userId,
+      image: image || null
     });
 
     await expense.populate('paidBy', 'name avatar');
@@ -252,7 +253,7 @@ router.put('/:expenseId', authenticate, checkSubscriptionForWrite, [
 
     const { expenseId } = req.params;
     const userId = req.user._id;
-    const { amount, description, paidBy, splitType, splits } = req.body;
+    const { amount, description, paidBy, splitType, splits, image } = req.body;
 
     const expense = await Expense.findById(expenseId);
     if (!expense) {
@@ -266,6 +267,7 @@ router.put('/:expenseId', authenticate, checkSubscriptionForWrite, [
 
     if (amount !== undefined) expense.amount = parseFloat(amount);
     if (description !== undefined) expense.description = description;
+    if (image !== undefined) expense.image = image || null;
     if (paidBy !== undefined) {
       if (!group.isMember(paidBy)) {
         return res.status(400).json({ success: false, message: 'Payer must be a group member' });

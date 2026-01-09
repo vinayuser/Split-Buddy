@@ -12,6 +12,7 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
 import * as Contacts from 'expo-contacts';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -19,6 +20,7 @@ import { groupAPI, expenseAPI, settlementAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, typography, borderRadius } from '../../theme/colors';
 import { getInitials, formatDate, formatTime } from '../../utils/helpers';
+import { wp, hp, scaleFont, scaleSize, getResponsiveDimensions } from '../../utils/responsive';
 import TabView from '../../components/TabView';
 import EmptyState from '../../components/EmptyState';
 
@@ -26,7 +28,7 @@ export default function GroupDetailScreen({ route, navigation }) {
   const { groupId } = route.params;
   const { user } = useAuth();
   const [group, setGroup] = useState(null);
-  const [activeTab, setActiveTab] = useState(0); // 0: Expenses, 1: Members, 2: Settlements, 3: Balances
+  const [activeTab, setActiveTab] = useState(0); // 0: Expenses, 1: Members, 2: Settlements, 3: Balances, 4: Chat
   
   // Expenses state with pagination
   const [expenses, setExpenses] = useState([]);
@@ -461,6 +463,22 @@ export default function GroupDetailScreen({ route, navigation }) {
         <View style={styles.expenseCardBody}>
           <Text style={styles.expenseCardDescription}>{item.description || 'No description'}</Text>
           
+          {item.image && (
+            <TouchableOpacity
+              style={styles.expenseImageContainer}
+              onPress={() => {
+                // You can add a modal to view full image here
+                Alert.alert('Receipt', 'Tap to view full image');
+              }}
+              activeOpacity={0.8}
+            >
+              <Image source={{ uri: item.image }} style={styles.expenseImage} />
+              <View style={styles.expenseImageOverlay}>
+                <Icon name="image" size={20} color={colors.background} />
+              </View>
+            </TouchableOpacity>
+          )}
+          
           {splits.length > 0 && (
             <View style={styles.expenseCardSplits}>
               <View style={styles.expenseCardSplitsHeader}>
@@ -560,6 +578,7 @@ export default function GroupDetailScreen({ route, navigation }) {
     { key: 'members', label: 'Members', badge: group?.members?.length || null },
     { key: 'settlements', label: 'Settlements' },
     { key: 'balances', label: 'Balances' },
+    { key: 'chat', label: 'Chat', icon: 'message-text' },
   ];
 
   const renderExpensesTab = () => (
@@ -1053,6 +1072,18 @@ export default function GroupDetailScreen({ route, navigation }) {
       {activeTab === 1 && renderMembersTab()}
       {activeTab === 2 && renderSettlementsTab()}
       {activeTab === 3 && renderBalancesTab()}
+      {activeTab === 4 && (
+        <View style={styles.tabContent}>
+          <TouchableOpacity
+            style={styles.chatButton}
+            onPress={() => navigation.navigate('Chat', { groupId })}
+          >
+            <Icon name="message-text" size={48} color={colors.primary} />
+            <Text style={styles.chatButtonText}>Open Group Chat</Text>
+            <Text style={styles.chatButtonSubtext}>Chat with group members in real-time</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Floating Add Expense Button */}
       {activeTab === 0 && (
@@ -1508,8 +1539,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.md,
     bottom: spacing.md,
-    width: 56,
-    height: 56,
+    width: scaleSize(56),
+    height: scaleSize(56),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -1519,6 +1550,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  fabSecondary: {
+    bottom: spacing.md + 70,
+    backgroundColor: colors.secondary || '#6c757d',
+    width: scaleSize(48),
+    height: scaleSize(48),
+    borderRadius: borderRadius.round,
   },
   tabContent: {
     flex: 1,
@@ -1566,8 +1604,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   balanceAvatar: {
-    width: 48,
-    height: 48,
+    width: scaleSize(48),
+    height: scaleSize(48),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -1623,8 +1661,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   settlementAvatar: {
-    width: 40,
-    height: 40,
+    width: scaleSize(40),
+    height: scaleSize(40),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -1790,8 +1828,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   memberAvatar: {
-    width: 40,
-    height: 40,
+    width: scaleSize(40),
+    height: scaleSize(40),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -2215,8 +2253,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   expenseCardAvatar: {
-    width: 40,
-    height: 40,
+    width: scaleSize(40),
+    height: scaleSize(40),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -2258,6 +2296,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     lineHeight: 22,
   },
+  expenseImageContainer: {
+    position: 'relative',
+    marginTop: spacing.sm,
+    borderRadius: borderRadius.sm,
+    overflow: 'hidden',
+  },
+  expenseImage: {
+    width: '100%',
+    height: hp(18), // 18% of screen height (responsive)
+    minHeight: 120,
+    maxHeight: 200,
+    resizeMode: 'cover',
+  },
+  expenseImageOverlay: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: borderRadius.round,
+    padding: spacing.xs,
+  },
   expenseCardSplits: {
     marginTop: spacing.sm,
     paddingTop: spacing.md,
@@ -2285,8 +2344,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   expenseCardSplitAvatar: {
-    width: 28,
-    height: 28,
+    width: scaleSize(28),
+    height: scaleSize(28),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
@@ -2694,8 +2753,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactAvatar: {
-    width: 48,
-    height: 48,
+    width: scaleSize(48),
+    height: scaleSize(48),
     borderRadius: borderRadius.round,
     backgroundColor: colors.background,
     alignItems: 'center',
@@ -2774,15 +2833,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   insightCard: {
-    width: 140,
+    width: wp(35), // 35% of screen width (responsive)
+    minWidth: 120,
+    maxWidth: 160,
     padding: spacing.md,
     backgroundColor: colors.backgroundSecondary,
     borderRadius: borderRadius.md,
     alignItems: 'center',
   },
   insightIconContainer: {
-    width: 48,
-    height: 48,
+    width: scaleSize(48),
+    height: scaleSize(48),
     borderRadius: borderRadius.round,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2801,6 +2862,30 @@ const styles = StyleSheet.create({
   },
   emptyStateContainer: {
     paddingVertical: spacing.xl,
+  },
+  chatButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+    backgroundColor: colors.card,
+    margin: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+  },
+  chatButtonText: {
+    ...typography.h3,
+    fontWeight: '600',
+    color: colors.primary,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  chatButtonSubtext: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
 });
 

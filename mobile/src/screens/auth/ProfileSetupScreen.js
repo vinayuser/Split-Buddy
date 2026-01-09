@@ -25,9 +25,10 @@ try {
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, typography, borderRadius } from '../../theme/colors';
 import { getInitials } from '../../utils/helpers';
+import { wp, hp, scaleSize, scaleFont, getResponsiveDimensions } from '../../utils/responsive';
 
 const { width } = Dimensions.get('window');
-const isSmallScreen = width < 375;
+const { isSmallScreen, isMediumScreen, isLargeScreen } = getResponsiveDimensions();
 
 export default function ProfileSetupScreen({ navigation, route }) {
   const { user, loadUser } = useAuth();
@@ -227,17 +228,23 @@ export default function ProfileSetupScreen({ navigation, route }) {
           <Card.Content>
             <Text variant="titleMedium" style={styles.sectionTitle}>Personal Information</Text>
 
-            <TextInput
-              mode="outlined"
-              label="Full Name *"
-              placeholder="Enter your full name"
-              value={name}
-              onChangeText={setName}
-              maxLength={100}
-              autoCapitalize="words"
-              left={<TextInput.Icon icon="account" />}
-              style={styles.input}
-            />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                mode="outlined"
+                label="Full Name *"
+                placeholder="Enter your full name"
+                value={name}
+                onChangeText={setName}
+                maxLength={100}
+                autoCapitalize="words"
+                left={<TextInput.Icon icon="account" />}
+                style={styles.input}
+                keyboardType="default"
+                autoComplete="name"
+                textContentType="name"
+                returnKeyType="next"
+              />
+            </View>
 
             <Text variant="bodySmall" style={styles.label}>Gender</Text>
             <View style={styles.genderContainer}>
@@ -321,8 +328,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   logoContainer: {
-    width: isSmallScreen ? 120 : 140,
-    height: isSmallScreen ? 120 : 140,
+    width: wp(35), // 35% of screen width (responsive)
+    height: wp(35), // Maintain square aspect ratio
+    maxWidth: 140,
+    maxHeight: 140,
+    minWidth: 100,
+    minHeight: 100,
     borderRadius: borderRadius.round,
     overflow: 'hidden',
   },
@@ -335,16 +346,17 @@ const styles = StyleSheet.create({
   },
   profileBadge: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 32,
-    height: 32,
+    top: 0, // Changed from -8 to 0 to keep it on screen
+    right: 0, // Changed from -8 to 0 to keep it on screen
+    width: scaleSize(32), // Use responsive size
+    height: scaleSize(32),
     borderRadius: borderRadius.round,
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: colors.primary,
+    zIndex: 10, // Ensure it's on top
   },
   headerInfoCard: {
     marginTop: spacing.md,
@@ -437,8 +449,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.xs,
   },
-  input: {
+  inputWrapper: {
     marginBottom: spacing.md,
+    width: '100%',
+  },
+  input: {
+    width: '100%',
   },
   textArea: {
     minHeight: 100,

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Animated,
 } from 'react-native';
 import { Text, Card, Surface, FAB, Chip, Divider, Button } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -17,14 +18,16 @@ import { groupAPI, balanceAPI, expenseAPI, activityAPI, bannerAPI } from '../../
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, typography, borderRadius } from '../../theme/colors';
 import { formatRelativeTime, getInitials } from '../../utils/helpers';
+import { wp, hp, scaleFont, scaleSize, getResponsiveDimensions } from '../../utils/responsive';
 import EmptyState from '../../components/EmptyState';
 import { FlatList, Pressable } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
-const isSmallScreen = width < 375;
-const GROUP_CARD_WIDTH = isSmallScreen ? 140 : 160; // Rectangular card width
-const GROUP_CARD_HEIGHT = isSmallScreen ? 100 : 120; // Rectangular card height
-const BANNER_HEIGHT = isSmallScreen ? 160 : 180; // Responsive banner ad height
+const { isSmallScreen, isMediumScreen, isLargeScreen, isTablet } = getResponsiveDimensions();
+// Use percentage-based widths for better responsiveness
+const GROUP_CARD_WIDTH = wp(42); // 42% of screen width (works on all devices)
+const GROUP_CARD_HEIGHT = hp(14); // 14% of screen height
+const BANNER_HEIGHT = hp(22); // 22% of screen height
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
@@ -33,7 +36,7 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const bannerScrollRef = useRef(null);
+  const bannerSlideX = useRef(new Animated.Value(0)).current;
   const [totalOwed, setTotalOwed] = useState(0);
   const [totalOwedToYou, setTotalOwedToYou] = useState(0);
   const [totalGroups, setTotalGroups] = useState(0);
@@ -239,32 +242,40 @@ export default function HomeScreen({ navigation }) {
     return '';
   };
 
-  // Auto-scroll banner ads
+  // Auto-slide banner ads with slide animation
   useEffect(() => {
     if (bannerAds.length > 1) {
+      // Initialize slide position to 0 for first banner
+      bannerSlideX.setValue(0);
+      
       const interval = setInterval(() => {
-        setCurrentBannerIndex((prev) => {
-          const next = (prev + 1) % bannerAds.length;
-          bannerScrollRef.current?.scrollTo({
-            x: next * width,
-            animated: true,
+        // Slide current banner out to left
+        Animated.timing(bannerSlideX, {
+          toValue: -width, // Slide out to the left
+          duration: 500,
+          useNativeDriver: true,
+        }).start(() => {
+          // Change banner index
+          setCurrentBannerIndex((prev) => {
+            const nextIndex = (prev + 1) % bannerAds.length;
+            // Reset position to right (off-screen) for new banner
+            bannerSlideX.setValue(width);
+            // Slide new banner in from right
+            Animated.timing(bannerSlideX, {
+              toValue: 0, // Slide in to center
+              duration: 500,
+              useNativeDriver: true,
+            }).start();
+            return nextIndex;
           });
-          return next;
         });
-      }, 5000); // Change banner every 5 seconds
+      }, 10000); // Change banner every 10 seconds
 
       return () => clearInterval(interval);
     }
-  }, [bannerAds.length]);
+  }, [bannerAds.length, bannerSlideX, width]);
 
-  const handleBannerScroll = (event) => {
-    if (!event || !event.nativeEvent) return;
-    const scrollPosition = event.nativeEvent.contentOffset.x;
-    const bannerWidth = width - spacing.md * 2 + spacing.md;
-    const index = Math.round(scrollPosition / bannerWidth);
-    const clampedIndex = Math.max(0, Math.min(index, bannerAds.length - 1));
-    setCurrentBannerIndex(clampedIndex);
-  };
+  // Removed handleBannerScroll - using simple state-based slider now
 
   const handleBannerPress = async (banner) => {
     if (banner.actionUrl) {
@@ -284,84 +295,7 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const renderBannerAd = (ad, index) => {
-    const hasImage = ad.image && ad.image.trim() !== '';
-    const imageSource = hasImage 
-      ? { uri: ad.image }
-      : null;
-
-    return (
-      <View
-        key={ad._id || ad.id || index}
-        style={styles.bannerCardWrapper}
-      >
-        <Card
-          style={styles.bannerCard}
-          mode="elevated"
-          onPress={() => handleBannerPress(ad)}
-        >
-          <Card.Content style={styles.bannerContent}>
-            {hasImage ? (
-              <View style={styles.bannerWithImageContainer}>
-                <View style={styles.bannerTextContainer}>
-                  <Text variant="titleLarge" style={styles.bannerTitle} numberOfLines={2} adjustsFontSizeToFit={true}>
-                    {ad.title}
-                  </Text>
-                  <Text variant="bodyMedium" style={styles.bannerDescription} numberOfLines={2} adjustsFontSizeToFit={true}>
-                    {ad.description}
-                  </Text>
-                  {ad.action && (
-                    <Chip 
-                      icon="arrow-right" 
-                      style={styles.bannerButton}
-                      textStyle={styles.bannerButtonText}
-                      onPress={() => handleBannerPress(ad)}
-                    >
-                      {ad.action}
-                    </Chip>
-                  )}
-                </View>
-                <View style={styles.bannerImageContainer}>
-                  <Image 
-                    source={imageSource} 
-                    style={styles.bannerImage}
-                    resizeMode="contain"
-                    onError={(error) => {
-                      console.log('Failed to load banner image:', error);
-                    }}
-                  />
-                </View>
-              </View>
-            ) : (
-              <View style={styles.bannerWithoutImageContainer}>
-                <View style={styles.bannerTextContainer}>
-                  <Text variant="titleLarge" style={styles.bannerTitle} numberOfLines={2} adjustsFontSizeToFit={true}>
-                    {ad.title}
-                  </Text>
-                  <Text variant="bodyMedium" style={styles.bannerDescription} numberOfLines={3} adjustsFontSizeToFit={true}>
-                    {ad.description}
-                  </Text>
-                  {ad.action && (
-                    <Chip 
-                      icon="arrow-right" 
-                      style={styles.bannerButton}
-                      textStyle={styles.bannerButtonText}
-                      onPress={() => handleBannerPress(ad)}
-                    >
-                      {ad.action}
-                    </Chip>
-                  )}
-                </View>
-                <Surface style={styles.bannerIconContainer} elevation={0}>
-                  <Icon name="tag" size={48} color={colors.primary} />
-                </Surface>
-              </View>
-            )}
-          </Card.Content>
-        </Card>
-      </View>
-    );
-  };
+  // Removed renderBannerAd - using inline rendering now
 
   const renderActivityItem = useCallback(({ item }) => {
     const isExpense = item.type === 'expense';
@@ -412,87 +346,7 @@ export default function HomeScreen({ navigation }) {
     );
   }, [navigation]);
 
-  const renderGroup = (item, index) => {
-    const balance = groupBalances[item._id];
-    const netBalance = balance?.net || 0;
-    const isArchived = item.isArchived || false;
-    
-    return (
-      <TouchableOpacity
-        key={item._id}
-        style={styles.groupCard}
-        onPress={() => navigation.navigate('GroupDetail', { groupId: item._id })}
-        activeOpacity={0.7}
-      >
-        <View 
-          style={[styles.groupCardContainer, isArchived && styles.groupCardContainerArchived]}
-        >
-          <View style={styles.groupCardContent}>
-            <View style={styles.groupCardTop}>
-              <View 
-                style={[styles.groupCardAvatar, isArchived && styles.groupCardAvatarArchived]}
-              >
-                <Text style={styles.groupCardAvatarText}>
-                  {getInitials(item.name)}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.groupCardBottom}>
-              <Text 
-                style={[styles.groupCardName, isArchived && styles.groupCardNameArchived]} 
-                numberOfLines={1}
-              >
-                {item.name}
-              </Text>
-              
-              {balance && (
-                <View style={styles.groupCardBalanceContainer}>
-                  {netBalance > 0.01 ? (
-                    <View style={[styles.balanceBadge, styles.balanceBadgePositive]}>
-                      <Icon name="arrow-top-right" size={10} color={colors.balancePositive} />
-                      <Text 
-                        style={[styles.balanceBadgeText, styles.balanceBadgeTextPositive]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit={true}
-                        minimumFontScale={0.8}
-                      >
-                        +₹{netBalance.toFixed(0)}
-                      </Text>
-                    </View>
-                  ) : netBalance < -0.01 ? (
-                    <View style={[styles.balanceBadge, styles.balanceBadgeNegative]}>
-                      <Icon name="arrow-bottom-left" size={10} color={colors.balanceNegative} />
-                      <Text 
-                        style={[styles.balanceBadgeText, styles.balanceBadgeTextNegative]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit={true}
-                        minimumFontScale={0.8}
-                      >
-                        ₹{Math.abs(netBalance).toFixed(0)}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={[styles.balanceBadge, styles.balanceBadgeNeutral]}>
-                      <Icon name="check-circle" size={10} color={colors.textTertiary} />
-                      <Text 
-                        style={[styles.balanceBadgeText, styles.balanceBadgeTextNeutral]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit={true}
-                        minimumFontScale={0.8}
-                      >
-                        Settled
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  // Removed renderGroup - using inline rendering now for simpler layout
 
   return (
     <View style={styles.container}>
@@ -572,52 +426,224 @@ export default function HomeScreen({ navigation }) {
             </Card>
           </View>
 
-          {/* Recent Activity Section */}
+          {/* Groups Section */}
           <View style={styles.cardSection}>
-            <Card style={styles.activityCard} mode="elevated">
+            <Card style={styles.contentCard} mode="elevated">
               <Card.Content>
-                <View style={styles.sectionHeader}>
-                  <Text variant="titleLarge" style={styles.sectionTitle}>Recent Activity</Text>
-                  {lastUpdated && (
-                    <Text style={styles.lastUpdatedText}>
-                      Updated {formatRelativeTime(lastUpdated)}
-                    </Text>
-                  )}
-                </View>
-                
-                {activitiesLoading && recentActivities.length === 0 ? (
-                  <View style={styles.activityLoadingContainer}>
-                    <Text style={styles.activityLoadingText}>Loading activities...</Text>
+                {groups.length === 0 ? (
+                  <View style={styles.groupsEmptyContainer}>
+                    <EmptyState
+                      icon="account-group-outline"
+                      title="No groups yet"
+                      subtitle="Create your first group to start splitting expenses with friends"
+                      buttonText="Create Group"
+                      onPress={() => navigation.navigate('CreateGroup')}
+                      style={styles.groupsEmptyState}
+                    />
                   </View>
-                ) : recentActivities.length === 0 ? (
-                  <EmptyState
-                    icon="history"
-                    title="No recent activity"
-                    subtitle="Add your first expense to see activity here"
-                    actionLabel="Add Expense"
-                    onAction={() => {
-                      if (groups.length > 0) {
-                        navigation.navigate('GroupDetail', { groupId: groups[0]._id });
-                      } else {
-                        navigation.navigate('CreateGroup');
-                      }
-                    }}
-                    style={styles.activityEmptyState}
-                  />
                 ) : (
-                  <FlatList
-                    data={recentActivities}
-                    renderItem={renderActivityItem}
-                    keyExtractor={(item) => `${item.type}-${item.id}`}
-                    scrollEnabled={false}
-                    ItemSeparatorComponent={() => <View style={styles.activitySeparator} />}
-                  />
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.groupsRow}
+                    style={styles.groupsScrollView}
+                  >
+                    {/* Add Group Button - First */}
+                    <TouchableOpacity
+                      style={styles.addGroupItem}
+                      onPress={() => navigation.navigate('CreateGroup')}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.addGroupAvatar}>
+                        <Icon name="plus" size={24} color={colors.primary} />
+                      </View>
+                      <Text style={styles.addGroupLabel} numberOfLines={1}>Add</Text>
+                    </TouchableOpacity>
+                    
+                    {/* Groups */}
+                    {groups.map((group) => (
+                      <TouchableOpacity
+                        key={group._id}
+                        style={styles.groupItem}
+                        onPress={() => navigation.navigate('GroupDetail', { groupId: group._id })}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.groupAvatar, group.isArchived && styles.groupAvatarArchived]}>
+                          <Text style={styles.groupAvatarText}>
+                            {getInitials(group.name)}
+                          </Text>
+                        </View>
+                        <Text style={[styles.groupName, group.isArchived && styles.groupNameArchived]} numberOfLines={1}>
+                          {group.name.length > 5 ? group.name.substring(0, 5) + '...' : group.name}
+                        </Text>
+                        {groupBalances[group._id] && (
+                          <View style={styles.groupStatus}>
+                            {(() => {
+                              const balance = groupBalances[group._id];
+                              const netBalance = balance?.net || 0;
+                              if (netBalance > 0.01) {
+                                return (
+                                  <View style={[styles.statusBadge, styles.statusBadgePositive]}>
+                                    <Icon name="arrow-top-right" size={10} color={colors.balancePositive} />
+                                    <Text style={[styles.statusText, styles.statusTextPositive]} numberOfLines={1}>
+                                      +₹{netBalance.toFixed(0)}
+                                    </Text>
+                                  </View>
+                                );
+                              } else if (netBalance < -0.01) {
+                                return (
+                                  <View style={[styles.statusBadge, styles.statusBadgeNegative]}>
+                                    <Icon name="arrow-bottom-left" size={10} color={colors.balanceNegative} />
+                                    <Text style={[styles.statusText, styles.statusTextNegative]} numberOfLines={1}>
+                                      ₹{Math.abs(netBalance).toFixed(0)}
+                                    </Text>
+                                  </View>
+                                );
+                              } else {
+                                return (
+                                  <View style={[styles.statusBadge, styles.statusBadgeNeutral]}>
+                                    <Icon name="check-circle" size={10} color={colors.textTertiary} />
+                                    <Text style={[styles.statusText, styles.statusTextNeutral]} numberOfLines={1}>
+                                      Settled
+                                    </Text>
+                                  </View>
+                                );
+                              }
+                            })()}
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 )}
               </Card.Content>
             </Card>
           </View>
 
-          {/* Card 2: Premium Upgrade */}
+          {/* Banner Ads - Auto Slider */}
+          {bannersLoading ? (
+            <View style={styles.cardSection}>
+              <Card style={styles.premiumCard} mode="elevated">
+                <Card.Content>
+                  <View style={styles.bannerLoadingContainer}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                </Card.Content>
+              </Card>
+            </View>
+          ) : bannerAds.length > 0 ? (
+            <View style={styles.cardSection}>
+              <Card style={styles.bannerCard} mode="flat">
+                <View style={styles.bannerCardWrapper}>
+                  {bannerAds.map((ad, index) => (
+                    <Animated.View
+                      key={ad._id || ad.id || index}
+                      style={[
+                        styles.bannerItem,
+                        index === currentBannerIndex && styles.bannerItemActive,
+                        index === currentBannerIndex && {
+                          transform: [{ translateX: bannerSlideX }],
+                        },
+                      ]}
+                    >
+                      {index === currentBannerIndex && (
+                        <>
+                          {/* Background Image - Covers entire Card */}
+                          {ad.image && ad.image.trim() !== '' && (
+                            <View style={styles.bannerImageContainer}>
+                              <Image 
+                                source={{ uri: ad.image }} 
+                                style={styles.bannerImage}
+                              />
+                            </View>
+                          )}
+                          {/* Content on top of image */}
+                          <Card.Content style={styles.bannerContent}>
+                            {ad.image && ad.image.trim() !== '' ? (
+                              <View style={styles.bannerWithImageContainer}>
+                                <View style={styles.bannerTextContainer}>
+                                  <Text variant="titleLarge" style={styles.bannerTitle} numberOfLines={2}>
+                                    {ad.title}
+                                  </Text>
+                                  <Text variant="bodyMedium" style={styles.bannerDescription} numberOfLines={2}>
+                                    {ad.description}
+                                  </Text>
+                                  {ad.action && (
+                                    <Chip 
+                                      icon="arrow-right" 
+                                      style={styles.bannerButton}
+                                      textStyle={styles.bannerButtonText}
+                                      onPress={() => handleBannerPress(ad)}
+                                    >
+                                      {ad.action}
+                                    </Chip>
+                                  )}
+                                </View>
+                              </View>
+                            ) : (
+                              <View style={styles.bannerWithoutImageContainer}>
+                                <View style={styles.bannerTextContainer}>
+                                  <Text variant="titleLarge" style={styles.bannerTitle} numberOfLines={2}>
+                                    {ad.title}
+                                  </Text>
+                                  <Text variant="bodyMedium" style={styles.bannerDescription} numberOfLines={3}>
+                                    {ad.description}
+                                  </Text>
+                                  {ad.action && (
+                                    <Chip 
+                                      icon="arrow-right" 
+                                      style={styles.bannerButton}
+                                      textStyle={styles.bannerButtonText}
+                                      onPress={() => handleBannerPress(ad)}
+                                    >
+                                      {ad.action}
+                                    </Chip>
+                                  )}
+                                </View>
+                                <Surface style={styles.bannerIconContainer} elevation={2}>
+                                  <Icon name="tag" size={32} color={colors.primary} />
+                                </Surface>
+                              </View>
+                            )}
+                          </Card.Content>
+                        </>
+                      )}
+                    </Animated.View>
+                  ))}
+                  
+                  {/* Banner Indicators - Hidden */}
+                </View>
+              </Card>
+            </View>
+          ) : null}
+
+          {/* FAQ Section */}
+          <View style={styles.cardSection}>
+            <Card style={styles.faqCard} mode="elevated">
+              <Card.Content>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('FAQ')}
+                  style={styles.faqContainer}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.faqLeft}>
+                    <Surface style={styles.faqIconContainer} elevation={2}>
+                      <Icon name="help-circle" size={28} color={colors.primary} />
+                    </Surface>
+                    <View style={styles.faqTextContainer}>
+                      <Text variant="titleMedium" style={styles.faqTitle}>Need Help?</Text>
+                      <Text variant="bodySmall" style={styles.faqSubtitle}>
+                        Check out our FAQ section
+                      </Text>
+                    </View>
+                  </View>
+                  <Icon name="chevron-right" size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </Card.Content>
+            </Card>
+          </View>
+
+          {/* Premium Upgrade */}
           <View style={styles.cardSection}>
             <Card style={styles.premiumCard} mode="elevated">
               <Card.Content>
@@ -649,125 +675,6 @@ export default function HomeScreen({ navigation }) {
                     Upgrade
                   </Button>
                 </View>
-              </Card.Content>
-            </Card>
-          </View>
-
-          {/* Card 3: Groups Section */}
-          <View style={styles.cardSection}>
-            <Card style={styles.groupsCard} mode="elevated">
-              <Card.Content style={styles.groupsCardContent}>
-                {groups.length === 0 ? (
-                  <View style={styles.groupsEmptyContainer}>
-                    <EmptyState
-                      icon="account-group-outline"
-                      title="No groups yet"
-                      subtitle="Create your first group to start splitting expenses with friends"
-                      buttonText="Create Group"
-                      onPress={() => navigation.navigate('CreateGroup')}
-                      style={styles.groupsEmptyState}
-                    />
-                  </View>
-                ) : (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.groupsRow}
-                    style={styles.groupsScrollView}
-                  >
-                    {/* Add Group Button - First */}
-                    <TouchableOpacity
-                      style={styles.addGroupCard}
-                      onPress={() => navigation.navigate('CreateGroup')}
-                      activeOpacity={0.8}
-                    >
-                      <Surface style={styles.addGroupContainer} elevation={2}>
-                        <Icon name="plus" size={32} color={colors.primary} />
-                        <Text variant="bodyMedium" style={styles.addGroupText}>Add Group</Text>
-                      </Surface>
-                    </TouchableOpacity>
-                    
-                    {/* Groups */}
-                    {groups.map((group, index) => (
-                      <React.Fragment key={group._id}>
-                        {renderGroup(group, index)}
-                      </React.Fragment>
-                    ))}
-                  </ScrollView>
-                )}
-              </Card.Content>
-            </Card>
-          </View>
-
-          {/* Banner Ads Slider */}
-          {bannersLoading ? (
-            <View style={styles.bannerSection}>
-              <View style={styles.bannerCardWrapper}>
-                <Card style={styles.bannerCard} mode="elevated">
-                  <Card.Content style={[styles.bannerContent, { justifyContent: 'center', alignItems: 'center' }]}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  </Card.Content>
-                </Card>
-              </View>
-            </View>
-          ) : bannerAds.length > 0 ? (
-            <View style={styles.bannerSection}>
-              <ScrollView
-                ref={bannerScrollRef}
-                horizontal
-                pagingEnabled={false}
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={handleBannerScroll}
-                onScroll={handleBannerScroll}
-                scrollEventThrottle={16}
-                style={styles.bannerScrollView}
-                contentContainerStyle={styles.bannerScrollContent}
-                snapToInterval={width - spacing.md * 2 + spacing.md}
-                snapToAlignment="start"
-                decelerationRate="fast"
-              >
-                {bannerAds.map((ad, index) => renderBannerAd(ad, index))}
-              </ScrollView>
-              
-              {/* Banner Indicators */}
-              {bannerAds.length > 1 && (
-                <View style={styles.bannerIndicators}>
-                  {bannerAds.map((_, index) => (
-                    <View
-                      key={index}
-                      style={[
-                        styles.bannerIndicator,
-                        currentBannerIndex === index && styles.bannerIndicatorActive,
-                      ]}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : null}
-
-          {/* FAQ Section */}
-          <View style={styles.cardSection}>
-            <Card style={styles.faqCard} mode="elevated">
-              <Card.Content>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('FAQ')}
-                  style={styles.faqContainer}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.faqLeft}>
-                    <Surface style={styles.faqIconContainer} elevation={2}>
-                      <Icon name="help-circle" size={28} color={colors.primary} />
-                    </Surface>
-                    <View style={styles.faqTextContainer}>
-                      <Text variant="titleMedium" style={styles.faqTitle}>Need Help?</Text>
-                      <Text variant="bodySmall" style={styles.faqSubtitle}>
-                        Check out our FAQ section
-                      </Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron-right" size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
               </Card.Content>
             </Card>
           </View>
@@ -882,8 +789,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   faqIconContainer: {
-    width: 48,
-    height: 48,
+    width: scaleSize(48),
+    height: scaleSize(48),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
@@ -908,6 +815,21 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFD700',
   },
+  // Card style for groups and banners - match activity card style
+  contentCard: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    // Same as activityCard - no border, no shadow
+    elevation: 0, // Remove shadow
+    shadowOpacity: 0, // Remove shadow
+  },
+  // Banner card - no shadow, no border
+  bannerCard: {
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.lg,
+    elevation: 0, // Remove shadow
+    shadowOpacity: 0, // Remove shadow
+  },
   premiumContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -919,8 +841,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   premiumIconContainer: {
-    width: 64,
-    height: 64,
+    width: scaleSize(64),
+    height: scaleSize(64),
     borderRadius: borderRadius.round,
     backgroundColor: '#FFF9E6',
     alignItems: 'center',
@@ -950,14 +872,8 @@ const styles = StyleSheet.create({
   premiumButtonLabel: {
     fontWeight: '700',
   },
-  groupsCard: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
-  },
-  groupsCardContent: {
-    paddingBottom: spacing.md,
-    paddingTop: spacing.md,
-  },
+  // Removed groupsCard - using premiumCard style now
+  // Removed groupsCardContent - using Card.Content default padding
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -974,139 +890,116 @@ const styles = StyleSheet.create({
   },
   groupsScrollView: {
     marginHorizontal: 0,
-    paddingVertical: spacing.xs,
   },
   groupsRow: {
     flexDirection: 'row',
     paddingHorizontal: spacing.md,
-    paddingRight: spacing.lg,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.md,
     gap: spacing.md,
-    alignItems: 'stretch',
+    alignItems: 'flex-start',
   },
-  groupCard: {
-    width: GROUP_CARD_WIDTH,
-    flexShrink: 0,
-  },
-  groupCardContainer: {
-    width: GROUP_CARD_WIDTH,
-    height: GROUP_CARD_HEIGHT,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  groupCardContainerArchived: {
-    opacity: 0.7,
-  },
-  groupCardContent: {
-    flex: 1,
-    padding: spacing.md,
-    justifyContent: 'space-between',
-  },
-  groupCardTop: {
+  // Add Group Item
+  addGroupItem: {
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    width: scaleSize(70),
+    marginRight: spacing.xs,
   },
-  groupCardAvatar: {
-    width: 56,
-    height: 56,
+  addGroupAvatar: {
+    width: scaleSize(56),
+    height: scaleSize(56),
+    borderRadius: borderRadius.round,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  addGroupLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  // Group Item
+  groupItem: {
+    alignItems: 'center',
+    width: scaleSize(70),
+    marginRight: spacing.xs,
+  },
+  groupAvatar: {
+    width: scaleSize(56),
+    height: scaleSize(56),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.xs,
+    borderWidth: 2,
+    borderColor: colors.primary,
   },
-  groupCardAvatarArchived: {
+  groupAvatarArchived: {
     opacity: 0.6,
     backgroundColor: colors.textTertiary,
+    borderColor: colors.textTertiary,
   },
-  groupCardAvatarText: {
-    fontWeight: '800',
+  groupAvatarText: {
+    fontWeight: '700',
     color: colors.background,
-    fontSize: 22,
+    fontSize: 18,
     letterSpacing: 0.5,
   },
-  groupCardBottom: {
-    alignItems: 'center',
-  },
-  groupCardName: {
-    fontWeight: '700',
+  groupName: {
+    fontSize: 11,
+    fontWeight: '600',
     color: colors.textPrimary,
-    fontSize: 15,
     textAlign: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.xs / 2,
+    maxWidth: scaleSize(70),
   },
-  groupCardNameArchived: {
+  groupNameArchived: {
     color: colors.textTertiary,
   },
-  groupCardBalanceContainer: {
+  groupStatus: {
     width: '100%',
     alignItems: 'center',
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.xs / 2,
   },
-  balanceBadge: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs / 2,
+    paddingVertical: 2,
     borderRadius: borderRadius.sm,
-    gap: spacing.xs / 2,
+    gap: 2,
     maxWidth: '100%',
-    flexShrink: 1,
   },
-  balanceBadgePositive: {
+  statusBadgePositive: {
     backgroundColor: colors.primaryLight,
   },
-  balanceBadgeNegative: {
+  statusBadgeNegative: {
     backgroundColor: '#FEE2E2',
   },
-  balanceBadgeNeutral: {
+  statusBadgeNeutral: {
     backgroundColor: colors.backgroundSecondary,
   },
-  balanceBadgeText: {
-    fontSize: 11,
+  statusText: {
+    fontSize: 9,
     fontWeight: '700',
-    flexShrink: 1,
   },
-  balanceBadgeTextPositive: {
+  statusTextPositive: {
     color: colors.balancePositive,
   },
-  balanceBadgeTextNegative: {
+  statusTextNegative: {
     color: colors.balanceNegative,
   },
-  balanceBadgeTextNeutral: {
+  statusTextNeutral: {
     color: colors.textTertiary,
-    fontSize: 11,
-  },
-  addGroupCard: {
-    width: GROUP_CARD_WIDTH,
-  },
-  addGroupContainer: {
-    width: GROUP_CARD_WIDTH,
-    height: GROUP_CARD_HEIGHT,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.backgroundSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2.5,
-    borderColor: colors.primary,
-    borderStyle: 'dashed',
-  },
-  addGroupText: {
-    fontWeight: '700',
-    color: colors.primary,
-    marginTop: spacing.sm,
-    fontSize: 14,
+    fontSize: 9,
   },
   emptyIconContainer: {
-    width: 120,
-    height: 120,
+    width: wp(30),
+    height: wp(30),
     borderRadius: borderRadius.round,
     backgroundColor: colors.backgroundSecondary,
     alignItems: 'center',
@@ -1161,66 +1054,84 @@ const styles = StyleSheet.create({
     color: colors.background,
     fontWeight: '600',
   },
-  bannerSection: {
-    padding: spacing.md,
-    paddingTop: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  bannerScrollView: {
-    marginHorizontal: 0,
-  },
-  bannerScrollContent: {
-    paddingRight: spacing.md,
-  },
+  // Removed bannerSection, bannerScrollView, bannerScrollContent, bannerCardWrapper, bannerCard
+  // Using premiumCard style and new banner structure
   bannerCardWrapper: {
-    width: width - spacing.md * 2,
-    marginRight: spacing.md,
-    flexShrink: 0,
-  },
-  bannerCard: {
+    position: 'relative',
+    minHeight: hp(18),
     width: '100%',
-    height: BANNER_HEIGHT,
-    backgroundColor: colors.primaryLight,
-    overflow: 'hidden', // Keep hidden to maintain card boundaries
+    overflow: 'hidden',
+    borderRadius: borderRadius.lg,
+  },
+  bannerItem: {
+    width: '100%',
+    opacity: 0,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  bannerItemActive: {
+    opacity: 1,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  bannerLoadingContainer: {
+    minHeight: hp(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
   },
   bannerContent: {
     flex: 1,
     padding: spacing.md,
+    minHeight: hp(18),
+    width: '100%',
     height: '100%',
+    position: 'relative', // For absolute positioned background image
+    zIndex: 1, // Above background image
   },
   bannerWithImageContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
     height: '100%',
-    gap: spacing.sm,
+    minHeight: '100%',
+    gap: spacing.md,
+    flexWrap: 'wrap',
+    position: 'relative', // For absolute positioned image
+    overflow: 'hidden',
   },
   bannerWithoutImageContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: '100%',
+    minHeight: '100%',
+    gap: spacing.lg, // Increased gap
+    flexWrap: 'wrap',
   },
   bannerTextContainer: {
     flex: 1,
     justifyContent: 'center',
-    paddingRight: spacing.xs,
+    paddingRight: spacing.md,
     minWidth: 0, // Prevents text overflow
     flexShrink: 1,
+    zIndex: 1, // Ensure text is above background image
   },
   bannerTitle: {
     fontWeight: '700',
-    color: colors.primaryDark,
+    color: colors.textPrimary, // Match premium card text color
     marginBottom: spacing.xs,
-    fontSize: isSmallScreen ? 16 : 18,
+    fontSize: scaleFont(16), // Slightly smaller for better fit
   },
   bannerDescription: {
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    lineHeight: 20,
-    fontSize: isSmallScreen ? 13 : 14,
+    marginBottom: spacing.xs,
+    lineHeight: scaleFont(18),
+    fontSize: scaleFont(13), // Slightly smaller for better fit
   },
   bannerButton: {
     alignSelf: 'flex-start',
@@ -1233,30 +1144,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   bannerImageContainer: {
-    width: isSmallScreen ? 90 : 110,
-    height: BANNER_HEIGHT - spacing.md * 2 - 4, // Full height minus padding and some margin
-    minHeight: isSmallScreen ? 90 : 110,
-    maxHeight: BANNER_HEIGHT - spacing.md * 2 - 4,
-    borderRadius: borderRadius.md,
+    position: 'absolute', // Position absolutely to cover whole card
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
     overflow: 'hidden',
-    backgroundColor: colors.backgroundSecondary,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: borderRadius.lg, // Match card border radius
+    zIndex: 0, // Behind content
   },
   bannerImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'contain', // Show full image without cropping
+    resizeMode: 'cover', // Cover the entire card
+    opacity: 1, // Full opacity - not faded
   },
   bannerIconContainer: {
-    width: isSmallScreen ? 70 : 80,
-    height: isSmallScreen ? 70 : 80,
+    width: scaleSize(64), // Match premium icon size
+    height: scaleSize(64),
     borderRadius: borderRadius.round,
-    backgroundColor: colors.background,
+    backgroundColor: '#FFF9E6', // Match premium icon background
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.md,
+    // Add elevation like premium card
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   bannerIndicators: {
     flexDirection: 'row',
@@ -1299,8 +1217,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   activityIconContainer: {
-    width: 32,
-    height: 32,
+    width: scaleSize(32),
+    height: scaleSize(32),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',

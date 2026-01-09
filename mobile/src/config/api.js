@@ -2,7 +2,8 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { storage } from '../utils/storage';
 
-// Production API URL
+// API URL - for local development use: http://localhost:3010/api
+// For production use: http://13.232.231.52:3010/api
 const API_BASE_URL = process.env.API_BASE_URL || 'http://13.232.231.52:3010/api';
 
 console.log('API_BASE_URL:', API_BASE_URL);

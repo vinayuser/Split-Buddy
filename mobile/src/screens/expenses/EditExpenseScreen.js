@@ -8,8 +8,13 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { expenseAPI, groupAPI } from '../../services/api';
+import { colors, spacing, typography, borderRadius } from '../../theme/colors';
+import { showImagePickerOptions } from '../../utils/imageUpload';
+import { wp, hp, scaleSize } from '../../utils/responsive';
 
 export default function EditExpenseScreen({ route, navigation }) {
   const { expenseId } = route.params;
@@ -23,6 +28,8 @@ export default function EditExpenseScreen({ route, navigation }) {
   const [customSplits, setCustomSplits] = useState({});
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [image, setImage] = useState(null);
+  const [imageChanged, setImageChanged] = useState(false);
 
   useEffect(() => {
     loadExpense();
@@ -39,6 +46,7 @@ export default function EditExpenseScreen({ route, navigation }) {
         setPaidBy(exp.paidBy._id);
         setSplitType(exp.splitType);
         setSelectedParticipants(exp.splits.map((s) => s.userId._id));
+        setImage(exp.image || null);
         
         if (exp.splitType === 'custom') {
           const splits = {};
@@ -82,6 +90,24 @@ export default function EditExpenseScreen({ route, navigation }) {
         },
       ]
     );
+  };
+
+  const handleImagePicker = async () => {
+    try {
+      const selectedImage = await showImagePickerOptions();
+      if (selectedImage) {
+        setImage(selectedImage);
+        setImageChanged(true);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImageChanged(true);
   };
 
   const handleSubmit = async () => {
@@ -129,13 +155,20 @@ export default function EditExpenseScreen({ route, navigation }) {
 
     setLoading(true);
     try {
-      const response = await expenseAPI.updateExpense(expenseId, {
+      const expenseData = {
         description,
         amount: parseFloat(amount),
         paidBy,
         splitType,
         splits,
-      });
+      };
+      
+      // Add image if changed
+      if (imageChanged) {
+        expenseData.image = image;
+      }
+
+      const response = await expenseAPI.updateExpense(expenseId, expenseData);
 
       if (response.success) {
         navigation.goBack();
@@ -176,6 +209,29 @@ export default function EditExpenseScreen({ route, navigation }) {
           onChangeText={setAmount}
           keyboardType="decimal-pad"
         />
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Receipt/Image (Optional)</Text>
+          {image ? (
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: image }} style={styles.imagePreview} />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={handleRemoveImage}
+              >
+                <Icon name="close-circle" size={24} color={colors.error || '#dc3545'} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.imagePickerButton}
+              onPress={handleImagePicker}
+            >
+              <Icon name="camera-plus" size={24} color={colors.primary || '#6200ee'} />
+              <Text style={styles.imagePickerText}>Add Receipt/Image</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         <Text style={styles.label}>Paid By *</Text>
         {group.members.map((member) => (
@@ -442,6 +498,47 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  section: {
+    marginTop: 16,
+  },
+  imagePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderWidth: 2,
+    borderColor: '#6200ee',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    gap: 8,
+  },
+  imagePickerText: {
+    fontSize: 16,
+    color: '#6200ee',
+    fontWeight: '500',
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    alignItems: 'center',
+  },
+  imagePreview: {
+    width: '100%',
+    height: hp(24), // 24% of screen height (responsive)
+    minHeight: 150,
+    maxHeight: 250,
+    borderRadius: 8,
+    resizeMode: 'cover',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 4,
   },
 });
 

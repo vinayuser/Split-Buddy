@@ -219,24 +219,77 @@ router.post('/notifications', adminAuth, async (req, res) => {
       });
     }
 
-    // Send notification to topic (much more efficient than individual sends)
-    const result = await sendNotificationToTopic(notificationTopic, title, body, {
-      type: 'global_notification',
-      timestamp: new Date().toISOString(),
-    });
+    // For topic notifications, we need to handle both Expo and FCM tokens
+    // Get all users with tokens
+    const users = await User.find({ fcmToken: { $ne: null, $exists: true } }).select('fcmToken');
+    const tokens = users.map(u => u.fcmToken).filter(token => token && token.trim() !== '');
 
-    if (result.success) {
-      // Get count of users subscribed to this topic (for display)
-      const usersWithTokens = await User.countDocuments({ fcmToken: { $ne: null } });
-      
+    if (tokens.length === 0) {
+      return res.render('admin/notifications', {
+        success: null,
+        error: 'No users with registered tokens found',
+      });
+    }
+
+    // Separate Expo and FCM tokens
+    const { isExpoPushToken } = require('../services/notificationService');
+    const expoTokens = tokens.filter(token => isExpoPushToken(token));
+    const fcmTokens = tokens.filter(token => !isExpoPushToken(token));
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    // Send to FCM tokens via topic (if any)
+    if (fcmTokens.length > 0) {
+      try {
+        const result = await sendNotificationToTopic(notificationTopic, title, body, {
+          type: 'global_notification',
+          timestamp: new Date().toISOString(),
+        });
+        if (result.success) {
+          successCount += fcmTokens.length;
+        } else {
+          errorCount += fcmTokens.length;
+          errors.push(`FCM: ${result.error}`);
+        }
+      } catch (error) {
+        errorCount += fcmTokens.length;
+        errors.push(`FCM: ${error.message}`);
+      }
+    }
+
+    // Send to Expo tokens individually (Expo doesn't support topics)
+    if (expoTokens.length > 0) {
+      const { sendNotification } = require('../services/notificationService');
+      for (const token of expoTokens) {
+        try {
+          const result = await sendNotification(token, title, body, {
+            type: 'global_notification',
+            timestamp: new Date().toISOString(),
+          });
+          if (result.success) {
+            successCount++;
+          } else {
+            errorCount++;
+            errors.push(`Expo token: ${result.error}`);
+          }
+        } catch (error) {
+          errorCount++;
+          errors.push(`Expo token: ${error.message}`);
+        }
+      }
+    }
+
+    if (successCount > 0) {
       res.render('admin/notifications', {
-        success: `Notification sent successfully to topic: ${notificationTopic} (${usersWithTokens} users with tokens)`,
-        error: null,
+        success: `Notification sent successfully to ${successCount} users (${fcmTokens.length} FCM, ${expoTokens.length} Expo)${errorCount > 0 ? `. ${errorCount} failed.` : ''}`,
+        error: errors.length > 0 ? errors.join('; ') : null,
       });
     } else {
       res.render('admin/notifications', {
         success: null,
-        error: `Failed to send notification: ${result.error || 'Unknown error'}`,
+        error: `Failed to send notification: ${errors.join('; ')}`,
       });
     }
   } catch (error) {

@@ -5,11 +5,21 @@ const dotenv = require('dotenv');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*', // In production, specify your app's origin
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
 
 // View engine setup (EJS for admin panel)
 app.set('view engine', 'ejs');
@@ -62,6 +72,7 @@ app.use('/api/subscriptions', require('./backend/routes/subscriptions'));
 app.use('/api/activities', require('./backend/routes/activities'));
 app.use('/api/notifications', require('./backend/routes/notifications'));
 app.use('/api/banners', require('./backend/routes/banners'));
+app.use('/api/chat', require('./backend/routes/chat'));
 
 // Admin Panel Routes
 app.use('/admin', require('./backend/routes/admin'));
@@ -85,8 +96,13 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+// Socket.io connection handling
+const { setupSocketIO } = require('./backend/services/socketService');
+setupSocketIO(io);
+
+const PORT = process.env.PORT || 3010;
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Socket.io server ready`);
 });
 

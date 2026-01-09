@@ -195,12 +195,34 @@ export const activityAPI = {
 // Notification APIs
 export const notificationAPI = {
   registerToken: async (fcmToken) => {
-    const response = await api.post('/notifications/register-token', { fcmToken });
-    return response.data;
+    try {
+      console.log('Calling register-token API with token:', fcmToken.substring(0, 30) + '...');
+      const response = await api.post('/notifications/register-token', { fcmToken });
+      console.log('Register token API response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Register token API error:', error);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
+      throw error;
+    }
   },
   removeToken: async () => {
-    const response = await api.post('/notifications/remove-token');
-    return response.data;
+    try {
+      console.log('Calling remove-token API...');
+      const response = await api.post('/notifications/remove-token');
+      console.log('Remove token API response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Remove token API error:', error);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
+      throw error;
+    }
   },
 };
 
@@ -208,6 +230,18 @@ export const notificationAPI = {
 export const bannerAPI = {
   getBanners: async (active = true) => {
     const response = await api.get(`/banners?active=${active}`);
+    return response.data;
+  },
+};
+
+// Chat APIs
+export const chatAPI = {
+  getMessages: async (groupId, page = 1, limit = 50) => {
+    const response = await api.get(`/chat/group/${groupId}?page=${page}&limit=${limit}`);
+    return response.data;
+  },
+  markAsRead: async (groupId) => {
+    const response = await api.post(`/chat/group/${groupId}/read`);
     return response.data;
   },
 };

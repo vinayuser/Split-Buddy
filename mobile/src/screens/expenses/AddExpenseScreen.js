@@ -9,13 +9,16 @@ import {
   ActivityIndicator,
   ScrollView,
   Switch,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { expenseAPI, groupAPI } from '../../services/api';
 import { colors, spacing, typography, borderRadius } from '../../theme/colors';
+import { showImagePickerOptions } from '../../utils/imageUpload';
+import { wp, hp, scaleSize } from '../../utils/responsive';
 
 export default function AddExpenseScreen({ route, navigation }) {
-  const { groupId } = route.params;
+  const { groupId, prefill } = route.params || {};
   const [group, setGroup] = useState(null);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -24,10 +27,16 @@ export default function AddExpenseScreen({ route, navigation }) {
   const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [customSplits, setCustomSplits] = useState({});
   const [loading, setLoading] = useState(false);
+  const [image, setImage] = useState(null);
 
   useEffect(() => {
     loadGroup();
-  }, []);
+    // Prefill form if data is provided
+    if (prefill) {
+      if (prefill.description) setDescription(prefill.description);
+      if (prefill.amount) setAmount(prefill.amount);
+    }
+  }, [prefill]);
 
   const loadGroup = async () => {
     try {
@@ -57,6 +66,22 @@ export default function AddExpenseScreen({ route, navigation }) {
 
   const updateCustomSplit = (userId, value) => {
     setCustomSplits({ ...customSplits, [userId]: value });
+  };
+
+  const handleImagePicker = async () => {
+    try {
+      const selectedImage = await showImagePickerOptions();
+      if (selectedImage) {
+        setImage(selectedImage);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
   };
 
   const handleSubmit = async () => {
@@ -104,14 +129,21 @@ export default function AddExpenseScreen({ route, navigation }) {
 
     setLoading(true);
     try {
-      const response = await expenseAPI.createExpense({
+      const expenseData = {
         groupId,
         description,
         amount: parseFloat(amount),
         paidBy,
         splitType,
         splits,
-      });
+      };
+      
+      // Add image if selected
+      if (image) {
+        expenseData.image = image;
+      }
+
+      const response = await expenseAPI.createExpense(expenseData);
 
       if (response.success) {
         // Navigate back and refresh will happen via focus listener
@@ -159,6 +191,29 @@ export default function AddExpenseScreen({ route, navigation }) {
             onChangeText={setAmount}
             keyboardType="decimal-pad"
           />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Receipt/Image (Optional)</Text>
+          {image ? (
+            <View style={styles.imageContainer}>
+              <Image source={{ uri: image }} style={styles.imagePreview} />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={handleRemoveImage}
+              >
+                <Icon name="close-circle" size={24} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.imagePickerButton}
+              onPress={handleImagePicker}
+            >
+              <Icon name="camera-plus" size={24} color={colors.primary} />
+              <Text style={styles.imagePickerText}>Add Receipt/Image</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -345,8 +400,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   memberAvatar: {
-    width: 36,
-    height: 36,
+    width: scaleSize(36),
+    height: scaleSize(36),
     borderRadius: borderRadius.round,
     backgroundColor: colors.primary,
     alignItems: 'center',
@@ -403,8 +458,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: scaleSize(24),
+    height: scaleSize(24),
     borderWidth: 2,
     borderColor: colors.inputBorder,
     borderRadius: borderRadius.sm - 4,
@@ -417,7 +472,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   splitInput: {
-    width: 100,
+    width: wp(25), // 25% of screen width (responsive)
+    minWidth: 80,
+    maxWidth: 120,
     borderWidth: 1,
     borderColor: colors.inputBorder,
     borderRadius: borderRadius.sm,
@@ -447,6 +504,44 @@ const styles = StyleSheet.create({
   buttonText: {
     ...typography.button,
     color: colors.background,
+  },
+  imagePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.card,
+    gap: spacing.sm,
+  },
+  imagePickerText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '500',
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    alignItems: 'center',
+  },
+  imagePreview: {
+    width: '100%',
+    height: hp(24), // 24% of screen height (responsive)
+    minHeight: 150,
+    maxHeight: 250,
+    borderRadius: borderRadius.sm,
+    resizeMode: 'cover',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.round,
+    padding: spacing.xs,
   },
 });
 

@@ -7,15 +7,20 @@ import {
   Platform,
   TouchableOpacity,
   Dimensions,
+  ScrollView,
+  TextInput as RNTextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, TextInput, Button, Card, Surface } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { authAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, typography, borderRadius } from '../../theme/colors';
+import { wp, hp, scaleFont, scaleSize, getResponsiveDimensions } from '../../utils/responsive';
 
-const { width } = Dimensions.get('window');
-const isSmallScreen = width < 375;
+const { width, height } = Dimensions.get('window');
+const { isSmallScreen, isMediumScreen, isLargeScreen } = getResponsiveDimensions();
+const screenHeight = height;
 
 export default function OTPScreen({ route, navigation }) {
   const { userId, otp: receivedOTP } = route.params || {};
@@ -24,16 +29,39 @@ export default function OTPScreen({ route, navigation }) {
   const [loading, setLoading] = useState(false);
   const [displayOTP, setDisplayOTP] = useState(receivedOTP || '');
   const inputRefs = useRef([]);
+  const [focusedIndex, setFocusedIndex] = useState(null);
 
   const handleOTPChange = (index, value) => {
-    if (value.length > 1) return;
+    // Filter out non-numeric characters
+    const numericValue = value.replace(/[^0-9]/g, '');
+    if (numericValue.length > 1) {
+      // Handle paste - split and fill multiple inputs
+      const digits = numericValue.split('').slice(0, 6);
+      const newOtp = [...otp];
+      digits.forEach((digit, i) => {
+        if (index + i < 6) {
+          newOtp[index + i] = digit;
+        }
+      });
+      setOtp(newOtp);
+      // Focus on the last filled input or next empty
+      const lastFilledIndex = Math.min(index + digits.length - 1, 5);
+      const nextEmptyIndex = newOtp.findIndex((val, idx) => idx > lastFilledIndex && !val);
+      const focusIndex = nextEmptyIndex !== -1 ? nextEmptyIndex : Math.min(lastFilledIndex + 1, 5);
+      setTimeout(() => {
+        inputRefs.current[focusIndex]?.focus();
+      }, 50);
+      return;
+    }
     
     const newOtp = [...otp];
-    newOtp[index] = value;
+    newOtp[index] = numericValue;
     setOtp(newOtp);
 
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
+    if (numericValue && index < 5) {
+      setTimeout(() => {
+        inputRefs.current[index + 1]?.focus();
+      }, 50);
     }
   };
 
@@ -104,12 +132,18 @@ export default function OTPScreen({ route, navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <View style={styles.content}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -153,21 +187,41 @@ export default function OTPScreen({ route, navigation }) {
 
         {/* OTP Input */}
         <Card style={styles.inputCard} mode="elevated">
-          <Card.Content>
+          <Card.Content style={styles.cardContent}>
             <View style={styles.otpContainer}>
               {otp.map((digit, index) => (
-                <TextInput
+                <RNTextInput
                   key={index}
                   ref={(ref) => (inputRefs.current[index] = ref)}
-                  mode="outlined"
                   value={digit}
                   onChangeText={(value) => handleOTPChange(index, value)}
                   onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
+                  onFocus={() => setFocusedIndex(index)}
+                  onBlur={() => setFocusedIndex(null)}
                   keyboardType="number-pad"
-                  maxLength={1}
+                  maxLength={6}
                   selectTextOnFocus
-                  style={styles.otpInput}
-                  contentStyle={styles.otpInputContent}
+                  style={[
+                    styles.otpInputNative,
+                    focusedIndex === index && styles.otpInputNativeFocused,
+                    digit && styles.otpInputNativeFilled
+                  ]}
+                  textAlign="center"
+                  autoComplete="off"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  caretHidden={false}
+                  importantForAutofill="no"
+                  textContentType="none"
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => {
+                    if (index < 5) {
+                      inputRefs.current[index + 1]?.focus();
+                    }
+                  }}
+                  placeholder=""
+                  placeholderTextColor={colors.textTertiary}
                 />
               ))}
             </View>
@@ -201,20 +255,32 @@ export default function OTPScreen({ route, navigation }) {
             Didn't receive the code? Tap "Resend OTP" to request a new one.
           </Text>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.backgroundSecondary,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.backgroundSecondary,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
     padding: isSmallScreen ? spacing.md : spacing.lg,
     paddingBottom: spacing.xl,
+    paddingTop: Platform.OS === 'android' ? spacing.lg : spacing.xl,
+    minHeight: screenHeight * 0.9,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
@@ -249,8 +315,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -4,
     right: -4,
-    width: 28,
-    height: 28,
+    width: scaleSize(28),
+    height: scaleSize(28),
     borderRadius: borderRadius.round,
     backgroundColor: colors.background,
     alignItems: 'center',
@@ -307,9 +373,17 @@ const styles = StyleSheet.create({
   },
   otpContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.xl,
-    gap: isSmallScreen ? spacing.xs : spacing.sm,
+    gap: isSmallScreen ? spacing.xs / 2 : spacing.xs,
+    paddingHorizontal: 0, // Remove extra padding
+    flexWrap: 'nowrap', // Keep all inputs in one row
+    width: '100%',
+  },
+  cardContent: {
+    padding: spacing.md, // Ensure proper padding
+    overflow: 'hidden', // Prevent overflow
   },
   otpInput: {
     flex: 1,
@@ -318,6 +392,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 24,
     fontWeight: '700',
+  },
+  otpInputNative: {
+    width: wp(11), // Fixed width - 11% of screen width (6 inputs + gaps should fit)
+    aspectRatio: 1, // Square aspect ratio
+    height: scaleSize(56), // Fixed height for consistency
+    borderWidth: 2,
+    borderColor: colors.inputBorder,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.background,
+    fontSize: scaleFont(22),
+    fontWeight: '700',
+    color: colors.textPrimary,
+    padding: 0,
+    textAlignVertical: 'center',
+  },
+  otpInputNativeFocused: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
+    elevation: 2,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  otpInputNativeFilled: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
   },
   button: {
     marginBottom: spacing.md,

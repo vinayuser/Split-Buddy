@@ -1,7 +1,11 @@
 const admin = require('firebase-admin');
+const { Expo } = require('expo-server-sdk');
 
 // Initialize Firebase Admin SDK
 let firebaseInitialized = false;
+
+// Initialize Expo Push Notification client
+let expo = new Expo();
 
 const initializeFirebase = () => {
   if (firebaseInitialized) {
@@ -33,15 +37,30 @@ const initializeFirebase = () => {
   }
 };
 
-// Send notification to a single device
+// Check if token is an Expo Push Token
+const isExpoPushToken = (token) => {
+  return token && (
+    token.startsWith('ExponentPushToken[') ||
+    token.startsWith('ExpoPushToken[') ||
+    /^[a-zA-Z0-9_-]{22,}$/.test(token) // Expo token format
+  );
+};
+
+// Send notification to a single device (handles both Expo and FCM tokens)
 const sendNotification = async (fcmToken, title, body, data = {}) => {
+  if (!fcmToken) {
+    return { success: false, error: 'Token not provided' };
+  }
+
+  // Check if it's an Expo Push Token
+  if (isExpoPushToken(fcmToken)) {
+    return await sendExpoNotification(fcmToken, title, body, data);
+  }
+
+  // Otherwise, use Firebase Admin SDK
   if (!firebaseInitialized) {
     console.warn('Firebase not initialized. Skipping notification.');
     return { success: false, error: 'Firebase not initialized' };
-  }
-
-  if (!fcmToken) {
-    return { success: false, error: 'FCM token not provided' };
   }
 
   try {
@@ -87,6 +106,60 @@ const sendNotification = async (fcmToken, title, body, data = {}) => {
       return { success: false, error: 'Invalid token', shouldRemoveToken: true };
     }
     
+    return { success: false, error: error.message };
+  }
+};
+
+// Send notification via Expo Push Notification Service
+const sendExpoNotification = async (expoPushToken, title, body, data = {}) => {
+  try {
+    // Check that all your push tokens appear to be valid Expo push tokens
+    if (!Expo.isExpoPushToken(expoPushToken)) {
+      console.error(`Push token ${expoPushToken} is not a valid Expo push token`);
+      return { success: false, error: 'Invalid Expo push token' };
+    }
+
+    // Construct the message
+    const messages = [{
+      to: expoPushToken,
+      sound: 'default',
+      title: title,
+      body: body,
+      data: data,
+      priority: 'high',
+      channelId: 'expense_notifications',
+    }];
+
+    // Send the notification
+    const chunks = expo.chunkPushNotifications(messages);
+    const tickets = [];
+    
+    for (const chunk of chunks) {
+      try {
+        const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+        tickets.push(...ticketChunk);
+      } catch (error) {
+        console.error('Error sending Expo notification chunk:', error);
+      }
+    }
+
+    // Check for errors
+    const errors = [];
+    for (let i = 0; i < tickets.length; i++) {
+      const ticket = tickets[i];
+      if (ticket.status === 'error') {
+        errors.push(ticket.message);
+        console.error(`Error with ticket ${i}:`, ticket.message);
+      }
+    }
+
+    if (errors.length > 0) {
+      return { success: false, error: errors.join(', ') };
+    }
+
+    return { success: true, messageId: 'expo-' + Date.now() };
+  } catch (error) {
+    console.error('Error sending Expo notification:', error);
     return { success: false, error: error.message };
   }
 };
@@ -176,6 +249,16 @@ const sendNotificationToMultiple = async (fcmTokens, title, body, data = {}) => 
 
 // Subscribe a token to a topic
 const subscribeTokenToTopic = async (fcmToken, topic) => {
+  // Expo Push Tokens cannot be subscribed to Firebase topics
+  // They need to be handled differently (store topic subscriptions in DB)
+  if (isExpoPushToken(fcmToken)) {
+    console.log(`Expo Push Token detected. Topic subscription for ${topic} will be handled via database.`);
+    // For Expo tokens, we'll store the topic preference in the user model if needed
+    // For now, we'll just log it and return success
+    // In the future, you can store topics in User model and send to all users with that topic preference
+    return { success: true, note: 'Expo token - topic stored for reference' };
+  }
+
   if (!firebaseInitialized) {
     console.warn('Firebase not initialized. Skipping topic subscription.');
     return { success: false, error: 'Firebase not initialized' };
@@ -203,6 +286,12 @@ const subscribeTokenToTopic = async (fcmToken, topic) => {
 
 // Unsubscribe a token from a topic
 const unsubscribeTokenFromTopic = async (fcmToken, topic) => {
+  // Expo Push Tokens cannot be unsubscribed from Firebase topics
+  if (isExpoPushToken(fcmToken)) {
+    console.log(`Expo Push Token detected. Topic unsubscription for ${topic} handled via database.`);
+    return { success: true, note: 'Expo token - topic removed from reference' };
+  }
+
   if (!firebaseInitialized) {
     console.warn('Firebase not initialized. Skipping topic unsubscription.');
     return { success: false, error: 'Firebase not initialized' };
@@ -300,5 +389,6 @@ module.exports = {
   subscribeTokenToTopic,
   unsubscribeTokenFromTopic,
   initializeFirebase,
+  isExpoPushToken,
 };
 

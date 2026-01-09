@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { groupAPI } from '../../services/api';
+import { colors } from '../../theme/colors';
 
 export default function CreateGroupScreen({ navigation }) {
   const [name, setName] = useState('');
@@ -105,7 +106,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   button: {
-    backgroundColor: '#6200ee',
+    backgroundColor: colors.primary,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',

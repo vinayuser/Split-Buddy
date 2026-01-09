@@ -25,27 +25,65 @@ router.post('/register-token', authenticate, [
 
     const { fcmToken } = req.body;
     const userId = req.user._id;
+    
+    if (!fcmToken || typeof fcmToken !== 'string') {
+      console.error('ERROR: Invalid FCM token received:', fcmToken);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid FCM token provided'
+      });
+    }
+    
     const trimmedToken = fcmToken.trim();
+    
+    if (!trimmedToken) {
+      console.error('ERROR: FCM token is empty after trimming');
+      return res.status(400).json({
+        success: false,
+        message: 'FCM token cannot be empty'
+      });
+    }
 
     console.log('=== FCM TOKEN REGISTRATION ===');
     console.log(`User ID: ${userId}`);
+    console.log(`User phone/email: ${req.user.phone || req.user.email || 'N/A'}`);
     console.log(`Token received: ${trimmedToken.substring(0, 50)}...`);
     console.log(`Token length: ${trimmedToken.length}`);
 
     // Get old token if exists (to unsubscribe from topics)
     const user = await User.findById(userId);
+    if (!user) {
+      console.error('ERROR: User not found:', userId);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
     const oldToken = user.fcmToken;
     console.log(`Old token: ${oldToken ? oldToken.substring(0, 50) + '...' : 'NONE'}`);
 
     // Update user's FCM token
-    const updateResult = await User.findByIdAndUpdate(userId, {
-      fcmToken: trimmedToken
-    }, { new: true });
+    user.fcmToken = trimmedToken;
+    await user.save();
 
     // Verify token was saved
     const updatedUser = await User.findById(userId);
+    if (!updatedUser) {
+      console.error('ERROR: User not found after update');
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update user'
+      });
+    }
+    
     console.log(`Token after save: ${updatedUser.fcmToken ? updatedUser.fcmToken.substring(0, 50) + '...' : 'NULL'}`);
     console.log(`Token saved successfully: ${updatedUser.fcmToken === trimmedToken}`);
+    
+    if (updatedUser.fcmToken !== trimmedToken) {
+      console.error('ERROR: Token mismatch! Expected:', trimmedToken.substring(0, 50), 'Got:', updatedUser.fcmToken?.substring(0, 50));
+    }
+    
     console.log('==============================');
 
     // Unsubscribe old token from topics if it exists and is different
