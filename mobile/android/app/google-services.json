@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "126940236914",
+    "project_id": "split-kare",
+    "storage_bucket": "split-kare.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:126940236914:android:e957f05bd1c465ca9fc6eb",
+        "android_client_info": {
+          "package_name": "com.nishadasuya786.splitbuddy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCK1FL__syCJ8d2V0u8CI3CeDk0s1HVS0k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

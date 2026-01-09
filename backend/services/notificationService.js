@@ -38,12 +38,26 @@ const initializeFirebase = () => {
 };
 
 // Check if token is an Expo Push Token
+// Native FCM tokens are typically 150+ characters, while Expo tokens are shorter (22-40 chars)
 const isExpoPushToken = (token) => {
-  return token && (
-    token.startsWith('ExponentPushToken[') ||
-    token.startsWith('ExpoPushToken[') ||
-    /^[a-zA-Z0-9_-]{22,}$/.test(token) // Expo token format
-  );
+  if (!token || typeof token !== 'string') {
+    return false;
+  }
+  
+  // Expo tokens start with specific prefixes
+  if (token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken[')) {
+    return true;
+  }
+  
+  // Expo tokens are typically 22-40 characters, FCM tokens are 150+ characters
+  // If token is longer than 100 chars, it's likely an FCM token
+  if (token.length > 100) {
+    return false;
+  }
+  
+  // Check if it matches Expo token format (alphanumeric, 22-40 chars)
+  // This regex matches Expo tokens but excludes long FCM tokens
+  return /^[a-zA-Z0-9_-]{22,40}$/.test(token);
 };
 
 // Send notification to a single device (handles both Expo and FCM tokens)

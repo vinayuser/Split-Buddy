@@ -43,20 +43,66 @@ cd /var/www/html/splitwise-app
 npm install firebase-admin
 ```
 
-## Step 5: Install Mobile App Dependencies
+## Step 5: Get Firebase Configuration Files for Mobile App
+
+1. **Go to Firebase Console:**
+   - Navigate to [Firebase Console](https://console.firebase.google.com/)
+   - Select your project
+   - Go to **Project Settings** (gear icon)
+
+2. **Download Configuration Files:**
+   - For **Android**: Click on "Add app" or select your Android app → Download `google-services.json`
+   - For **iOS**: Click on "Add app" or select your iOS app → Download `GoogleService-Info.plist`
+
+3. **Add Files to Mobile App:**
+   ```bash
+   cd /var/www/html/splitwise-app/mobile
+   # Place google-services.json in mobile/ directory (root level)
+   # Place GoogleService-Info.plist in mobile/ directory (root level)
+   ```
+
+## Step 6: Install Mobile App Dependencies
 
 ```bash
 cd /var/www/html/splitwise-app/mobile
+npm install @react-native-firebase/app @react-native-firebase/messaging
 npx expo install expo-notifications expo-device
 ```
 
-## Step 6: Configure Expo Push Notifications
+**Note:** The Firebase packages are already added to `package.json`. Run `npm install` to install them.
 
-1. The app is already configured to use Expo Push Notifications
-2. The project ID in `app.json` is already set: `2a205468-d6d8-4228-9d2e-c43f02a76759`
-3. For production, you may want to configure Firebase Cloud Messaging (FCM) directly
+## Step 7: Configure Firebase in Mobile App
 
-## Step 7: Test Notifications
+The app is now configured to use **Native Firebase Cloud Messaging (FCM)** instead of Expo Push Notifications.
+
+**Configuration is already done:**
+- ✅ Firebase plugin added to `app.json`
+- ✅ `googleServicesFile` paths configured in `app.json`
+- ✅ Notification service updated to use Firebase Messaging
+- ✅ Package dependencies added
+
+**What you need to do:**
+1. Ensure `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) are in the `mobile/` directory
+2. Rebuild the app (native code changes require rebuild):
+
+```bash
+cd /var/www/html/splitwise-app/mobile
+
+# For Android
+npx expo prebuild --clean
+npx expo run:android
+
+# For iOS
+npx expo prebuild --clean
+npx expo run:ios
+```
+
+**Important:** 
+- You **must** rebuild the app after adding Firebase configuration files
+- The app uses native FCM tokens, not Expo Push Tokens
+- Tokens will be proper FCM tokens that work with Firebase Admin SDK
+
+## Step 8: Test Notifications
 
 1. Start the backend server
 2. Start the mobile app
@@ -78,12 +124,52 @@ npx expo install expo-notifications expo-device
 
 ## Troubleshooting
 
+### FCM Tokens are NULL/UNDEFINED?
+
+**Common Causes:**
+
+1. **Running on Simulator/Emulator:**
+   - Push notifications **only work on physical devices**
+   - Check logs for: "Notifications only work on physical devices"
+   - Solution: Test on a real Android/iOS device
+
+2. **Notification Permissions Not Granted:**
+   - Check logs for: "Notification permissions not granted"
+   - Solution: Grant notification permissions when prompted, or check device settings
+
+3. **Firebase Not Configured:**
+   - Check logs for: "Invalid app instance" or "Firebase not initialized"
+   - Solution: 
+     - Ensure `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) are in `mobile/` directory
+     - Rebuild the app: `npx expo prebuild --clean && npx expo run:android` (or `run:ios`)
+     - Verify Firebase plugin is in `app.json` plugins array
+
+4. **Token Generation Error:**
+   - Check app logs for detailed error messages
+   - Common Firebase errors:
+     - `messaging/invalid-app-instance-id-token`: Firebase not properly configured
+     - `messaging/permission-denied`: Permissions denied
+     - Check that Firebase configuration files are correct and match your Firebase project
+
+5. **Auth Token Missing:**
+   - Check logs for: "No auth token available"
+   - Solution: Ensure user is logged in before token registration
+
+**Debugging Steps:**
+
+1. Check mobile app logs for detailed error messages (the updated code provides extensive logging)
+2. Verify the user is logged in (auth token exists)
+3. Check that notification permissions are granted
+4. Ensure app is running on a physical device
+5. Check backend logs to see if token registration request is received
+
 ### Notifications not working?
 
-1. **Check Firebase credentials**: Ensure all environment variables are set correctly
-2. **Check token registration**: Verify tokens are being saved in the database
+1. **Check Firebase credentials**: Ensure all environment variables are set correctly in backend `.env`
+2. **Check token registration**: Verify tokens are being saved in the database (check User model `fcmToken` field)
 3. **Check permissions**: Ensure the app has notification permissions
 4. **Check logs**: Look for errors in backend console and mobile app logs
+5. **Verify device**: Ensure testing on a physical device, not simulator
 
 ### Invalid token errors?
 
@@ -91,12 +177,15 @@ npx expo install expo-notifications expo-device
   - App is uninstalled
   - App data is cleared
   - Token expires
+  - App is reinstalled
 - The system will automatically handle invalid tokens
+- Backend will skip sending to invalid tokens
 
 ### Notifications only work on physical devices
 
 - Push notifications require a physical device
 - They won't work in simulators/emulators
+- This is a limitation of both Expo Push Notifications and FCM
 
 ## Security Notes
 
