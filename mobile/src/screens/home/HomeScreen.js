@@ -304,10 +304,10 @@ export default function HomeScreen({ navigation }) {
             {hasImage ? (
               <View style={styles.bannerWithImageContainer}>
                 <View style={styles.bannerTextContainer}>
-                  <Text variant="titleLarge" style={styles.bannerTitle} numberOfLines={2}>
+                  <Text variant="titleLarge" style={styles.bannerTitle} numberOfLines={2} adjustsFontSizeToFit={true}>
                     {ad.title}
                   </Text>
-                  <Text variant="bodyMedium" style={styles.bannerDescription} numberOfLines={2}>
+                  <Text variant="bodyMedium" style={styles.bannerDescription} numberOfLines={2} adjustsFontSizeToFit={true}>
                     {ad.description}
                   </Text>
                   {ad.action && (
@@ -335,10 +335,10 @@ export default function HomeScreen({ navigation }) {
             ) : (
               <View style={styles.bannerWithoutImageContainer}>
                 <View style={styles.bannerTextContainer}>
-                  <Text variant="titleLarge" style={styles.bannerTitle} numberOfLines={2}>
+                  <Text variant="titleLarge" style={styles.bannerTitle} numberOfLines={2} adjustsFontSizeToFit={true}>
                     {ad.title}
                   </Text>
-                  <Text variant="bodyMedium" style={styles.bannerDescription} numberOfLines={3}>
+                  <Text variant="bodyMedium" style={styles.bannerDescription} numberOfLines={3} adjustsFontSizeToFit={true}>
                     {ad.description}
                   </Text>
                   {ad.action && (
@@ -450,22 +450,37 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.groupCardBalanceContainer}>
                   {netBalance > 0.01 ? (
                     <View style={[styles.balanceBadge, styles.balanceBadgePositive]}>
-                      <Icon name="arrow-top-right" size={12} color={colors.balancePositive} />
-                      <Text style={[styles.balanceBadgeText, styles.balanceBadgeTextPositive]}>
+                      <Icon name="arrow-top-right" size={10} color={colors.balancePositive} />
+                      <Text 
+                        style={[styles.balanceBadgeText, styles.balanceBadgeTextPositive]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit={true}
+                        minimumFontScale={0.8}
+                      >
                         +₹{netBalance.toFixed(0)}
                       </Text>
                     </View>
                   ) : netBalance < -0.01 ? (
                     <View style={[styles.balanceBadge, styles.balanceBadgeNegative]}>
-                      <Icon name="arrow-bottom-left" size={12} color={colors.balanceNegative} />
-                      <Text style={[styles.balanceBadgeText, styles.balanceBadgeTextNegative]}>
+                      <Icon name="arrow-bottom-left" size={10} color={colors.balanceNegative} />
+                      <Text 
+                        style={[styles.balanceBadgeText, styles.balanceBadgeTextNegative]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit={true}
+                        minimumFontScale={0.8}
+                      >
                         ₹{Math.abs(netBalance).toFixed(0)}
                       </Text>
                     </View>
                   ) : (
                     <View style={[styles.balanceBadge, styles.balanceBadgeNeutral]}>
-                      <Icon name="check-circle" size={12} color={colors.textTertiary} />
-                      <Text style={[styles.balanceBadgeText, styles.balanceBadgeTextNeutral]}>
+                      <Icon name="check-circle" size={10} color={colors.textTertiary} />
+                      <Text 
+                        style={[styles.balanceBadgeText, styles.balanceBadgeTextNeutral]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit={true}
+                        minimumFontScale={0.8}
+                      >
                         Settled
                       </Text>
                     </View>
@@ -508,13 +523,18 @@ export default function HomeScreen({ navigation }) {
                 
                 <View style={styles.balanceRow}>
                   <View style={styles.balanceItem}>
-                    <Text variant="bodySmall" style={styles.balanceLabel}>Total Balance</Text>
+                    <Text variant="bodySmall" style={styles.balanceLabel} numberOfLines={1}>
+                      Total Balance
+                    </Text>
                     <Text 
                       variant="titleLarge" 
                       style={[
                         styles.balanceValue,
                         totalBalance >= 0 ? styles.balanceValuePositive : styles.balanceValueNegative
                       ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                      minimumFontScale={0.7}
                     >
                       {totalBalance >= 0 ? '+' : ''}₹{Math.abs(totalBalance).toFixed(0)}
                     </Text>
@@ -798,6 +818,8 @@ const styles = StyleSheet.create({
   },
   balanceValue: {
     fontWeight: '700',
+    textAlign: 'center',
+    paddingHorizontal: spacing.xs,
   },
   balanceValuePositive: {
     color: colors.balancePositive,
@@ -1026,14 +1048,17 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     marginTop: spacing.xs,
+    paddingHorizontal: spacing.xs / 2,
   },
   balanceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs / 2,
     borderRadius: borderRadius.sm,
     gap: spacing.xs / 2,
+    maxWidth: '100%',
+    flexShrink: 1,
   },
   balanceBadgePositive: {
     backgroundColor: colors.primaryLight,
@@ -1045,8 +1070,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundSecondary,
   },
   balanceBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
+    flexShrink: 1,
   },
   balanceBadgeTextPositive: {
     color: colors.balancePositive,
@@ -1168,6 +1194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     height: '100%',
+    gap: spacing.sm,
   },
   bannerWithoutImageContainer: {
     flex: 1,
@@ -1179,8 +1206,9 @@ const styles = StyleSheet.create({
   bannerTextContainer: {
     flex: 1,
     justifyContent: 'center',
-    paddingRight: spacing.sm,
+    paddingRight: spacing.xs,
     minWidth: 0, // Prevents text overflow
+    flexShrink: 1,
   },
   bannerTitle: {
     fontWeight: '700',
@@ -1205,13 +1233,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   bannerImageContainer: {
-    width: isSmallScreen ? 100 : 120,
+    width: isSmallScreen ? 90 : 110,
     height: BANNER_HEIGHT - spacing.md * 2 - 4, // Full height minus padding and some margin
-    minHeight: isSmallScreen ? 100 : 120,
+    minHeight: isSmallScreen ? 90 : 110,
+    maxHeight: BANNER_HEIGHT - spacing.md * 2 - 4,
     borderRadius: borderRadius.md,
     overflow: 'hidden',
     backgroundColor: colors.backgroundSecondary,
-    marginLeft: spacing.sm,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',

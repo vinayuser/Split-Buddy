@@ -133,18 +133,7 @@ export default function OTPScreen({ route, navigation }) {
           <Text variant="bodyMedium" style={styles.subtitle}>
             We sent a 6-digit verification code to your phone via SMS
           </Text>
-          <Card mode="outlined" style={styles.infoCard}>
-            <Card.Content>
-              <View style={styles.infoRow}>
-                <Icon name="information-outline" size={20} color={colors.primary} />
-                <Text variant="bodySmall" style={styles.infoText}>
-                  The code will expire in 10 minutes. Didn't receive it? Tap "Resend OTP" below.
-                </Text>
-              </View>
-            </Card.Content>
-          </Card>
         </View>
-
         {/* OTP Display (Development Mode) */}
         {displayOTP && (
           <Card mode="outlined" style={styles.otpDisplayCard}>
