@@ -27,14 +27,26 @@ router.post('/register-token', authenticate, [
     const userId = req.user._id;
     const trimmedToken = fcmToken.trim();
 
+    console.log('=== FCM TOKEN REGISTRATION ===');
+    console.log(`User ID: ${userId}`);
+    console.log(`Token received: ${trimmedToken.substring(0, 50)}...`);
+    console.log(`Token length: ${trimmedToken.length}`);
+
     // Get old token if exists (to unsubscribe from topics)
     const user = await User.findById(userId);
     const oldToken = user.fcmToken;
+    console.log(`Old token: ${oldToken ? oldToken.substring(0, 50) + '...' : 'NONE'}`);
 
     // Update user's FCM token
-    await User.findByIdAndUpdate(userId, {
+    const updateResult = await User.findByIdAndUpdate(userId, {
       fcmToken: trimmedToken
-    });
+    }, { new: true });
+
+    // Verify token was saved
+    const updatedUser = await User.findById(userId);
+    console.log(`Token after save: ${updatedUser.fcmToken ? updatedUser.fcmToken.substring(0, 50) + '...' : 'NULL'}`);
+    console.log(`Token saved successfully: ${updatedUser.fcmToken === trimmedToken}`);
+    console.log('==============================');
 
     // Unsubscribe old token from topics if it exists and is different
     if (oldToken && oldToken !== trimmedToken) {

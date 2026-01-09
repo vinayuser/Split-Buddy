@@ -261,8 +261,25 @@ router.get('/users', adminAuth, async (req, res) => {
       .limit(limit)
       .skip(skip);
 
+    // Log token information for debugging
+    console.log('=== USER FCM TOKEN DEBUG ===');
+    console.log(`Total users fetched: ${users.length}`);
+    users.forEach((user, index) => {
+      console.log(`User ${index + 1}:`);
+      console.log(`  - Name: ${user.name}`);
+      console.log(`  - ID: ${user._id}`);
+      console.log(`  - FCM Token: ${user.fcmToken ? `EXISTS (${user.fcmToken.substring(0, 50)}...)` : 'NULL/UNDEFINED'}`);
+      console.log(`  - Token Type: ${typeof user.fcmToken}`);
+      console.log(`  - Token Length: ${user.fcmToken ? user.fcmToken.length : 0}`);
+    });
+    console.log('===========================');
+
     const totalUsers = await User.countDocuments();
     const totalPages = Math.ceil(totalUsers / limit);
+
+    // Also log total users with tokens
+    const usersWithTokens = await User.countDocuments({ fcmToken: { $ne: null, $exists: true } });
+    console.log(`Total users with FCM tokens in DB: ${usersWithTokens}`);
 
     res.render('admin/users', {
       users,

@@ -232,6 +232,7 @@
                             <th>Email</th>
                             <th>Status</th>
                             <th>Joined</th>
+                            <th>FCM Token</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -248,12 +249,19 @@
                                 </td>
                                 <td><%= new Date(user.createdAt).toLocaleDateString() %></td>
                                 <td>
+                                    <% if (user.fcmToken) { %>
+                                        <span class="badge badge-success" title="<%= user.fcmToken %>" style="font-size: 0.75rem; word-break: break-all; max-width: 200px; display: inline-block;">
+                                            <%= user.fcmToken.substring(0, 30) %>...
+                                        </span>
+                                    <% } else { %>
+                                        <span class="badge badge-danger">No Token</span>
+                                    <% } %>
+                                </td>
+                                <td>
                                     <div class="btn-group">
                                         <a href="/admin/users/<%= user._id %>" class="btn btn-small">View</a>
                                         <% if (user.fcmToken) { %>
                                             <button onclick="openNotificationModal('<%= user._id %>', '<%= user.name || 'User' %>')" class="btn btn-small btn-success">Send Notification</button>
-                                        <% } else { %>
-                                            <span class="token-status no-token" title="User has no FCM token">No Token</span>
                                         <% } %>
                                     </div>
                                 </td>
