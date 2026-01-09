@@ -219,20 +219,24 @@ router.post('/notifications', adminAuth, async (req, res) => {
       });
     }
 
+    // Send notification to topic (much more efficient than individual sends)
     const result = await sendNotificationToTopic(notificationTopic, title, body, {
       type: 'global_notification',
       timestamp: new Date().toISOString(),
     });
 
     if (result.success) {
+      // Get count of users subscribed to this topic (for display)
+      const usersWithTokens = await User.countDocuments({ fcmToken: { $ne: null } });
+      
       res.render('admin/notifications', {
-        success: `Notification sent successfully to topic: ${notificationTopic}`,
+        success: `Notification sent successfully to topic: ${notificationTopic} (${usersWithTokens} users with tokens)`,
         error: null,
       });
     } else {
       res.render('admin/notifications', {
         success: null,
-        error: `Failed to send notification: ${result.error}`,
+        error: `Failed to send notification: ${result.error || 'Unknown error'}`,
       });
     }
   } catch (error) {
@@ -252,7 +256,7 @@ router.get('/users', adminAuth, async (req, res) => {
     const skip = (page - 1) * limit;
 
     const users = await User.find()
-      .select('name phone email subscriptionStatus createdAt lastActiveAt')
+      .select('name phone email subscriptionStatus createdAt lastActiveAt fcmToken')
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(skip);
@@ -310,6 +314,48 @@ router.post('/users/:id/subscription', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('Update subscription error:', error);
     res.redirect(`/admin/users/${req.params.id}?error=Failed to update subscription`);
+  }
+});
+
+// Send notification to individual user
+router.post('/users/:id/send-notification', adminAuth, async (req, res) => {
+  try {
+    const { title, body } = req.body;
+    const userId = req.params.id;
+
+    if (!title || !body) {
+      return res.redirect(`/admin/users/${userId}?error=Title and body are required`);
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.redirect('/admin/users?error=User not found');
+    }
+
+    if (!user.fcmToken) {
+      return res.redirect(`/admin/users/${userId}?error=User does not have an FCM token registered`);
+    }
+
+    const { sendNotification } = require('../services/notificationService');
+    const result = await sendNotification(
+      user.fcmToken,
+      title,
+      body,
+      {
+        type: 'admin_notification',
+        userId: userId.toString(),
+        timestamp: new Date().toISOString(),
+      }
+    );
+
+    if (result.success) {
+      res.redirect(`/admin/users/${userId}?success=Notification sent successfully`);
+    } else {
+      res.redirect(`/admin/users/${userId}?error=Failed to send notification: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('Send user notification error:', error);
+    res.redirect(`/admin/users/${req.params.id}?error=Failed to send notification: ${error.message}`);
   }
 });
 

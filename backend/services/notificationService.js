@@ -144,6 +144,24 @@ const sendNotificationToMultiple = async (fcmTokens, title, body, data = {}) => 
       tokens: validTokens,
     });
 
+    // Log results for debugging
+    console.log(`Notification sent: ${response.successCount} successful, ${response.failureCount} failed`);
+    if (response.failureCount > 0) {
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          console.error(`Failed to send to token ${idx}:`, resp.error);
+          // Remove invalid tokens
+          if (resp.error && (
+            resp.error.code === 'messaging/invalid-registration-token' ||
+            resp.error.code === 'messaging/registration-token-not-registered'
+          )) {
+            // Token will be cleaned up on next request
+            console.log(`Token ${idx} is invalid and should be removed`);
+          }
+        }
+      });
+    }
+
     return {
       success: response.failureCount === 0,
       successCount: response.successCount,
@@ -152,6 +170,60 @@ const sendNotificationToMultiple = async (fcmTokens, title, body, data = {}) => 
     };
   } catch (error) {
     console.error('Error sending multicast notification:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Subscribe a token to a topic
+const subscribeTokenToTopic = async (fcmToken, topic) => {
+  if (!firebaseInitialized) {
+    console.warn('Firebase not initialized. Skipping topic subscription.');
+    return { success: false, error: 'Firebase not initialized' };
+  }
+
+  if (!fcmToken || !topic) {
+    return { success: false, error: 'FCM token and topic are required' };
+  }
+
+  try {
+    const response = await admin.messaging().subscribeToTopic([fcmToken], topic);
+    
+    if (response.successCount > 0) {
+      console.log(`Successfully subscribed token to topic: ${topic}`);
+      return { success: true, response };
+    } else {
+      console.error(`Failed to subscribe token to topic: ${topic}`, response.errors);
+      return { success: false, error: 'Subscription failed', response };
+    }
+  } catch (error) {
+    console.error('Error subscribing token to topic:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Unsubscribe a token from a topic
+const unsubscribeTokenFromTopic = async (fcmToken, topic) => {
+  if (!firebaseInitialized) {
+    console.warn('Firebase not initialized. Skipping topic unsubscription.');
+    return { success: false, error: 'Firebase not initialized' };
+  }
+
+  if (!fcmToken || !topic) {
+    return { success: false, error: 'FCM token and topic are required' };
+  }
+
+  try {
+    const response = await admin.messaging().unsubscribeFromTopic([fcmToken], topic);
+    
+    if (response.successCount > 0) {
+      console.log(`Successfully unsubscribed token from topic: ${topic}`);
+      return { success: true, response };
+    } else {
+      console.error(`Failed to unsubscribe token from topic: ${topic}`, response.errors);
+      return { success: false, error: 'Unsubscription failed', response };
+    }
+  } catch (error) {
+    console.error('Error unsubscribing token from topic:', error);
     return { success: false, error: error.message };
   }
 };
@@ -199,6 +271,7 @@ const sendNotificationToTopic = async (topic, title, body, data = {}) => {
     };
 
     const response = await admin.messaging().send(message);
+    console.log(`Notification sent to topic ${topic}:`, response);
     return { success: true, messageId: response };
   } catch (error) {
     console.error('Error sending topic notification:', error);
@@ -209,10 +282,23 @@ const sendNotificationToTopic = async (topic, title, body, data = {}) => {
 // Initialize on module load
 initializeFirebase();
 
+// Also initialize when server starts (in case env vars are loaded later)
+if (typeof process !== 'undefined' && process.env) {
+  // Re-initialize after a short delay to ensure env vars are loaded
+  setTimeout(() => {
+    if (!firebaseInitialized) {
+      console.log('Re-attempting Firebase initialization...');
+      initializeFirebase();
+    }
+  }, 1000);
+}
+
 module.exports = {
   sendNotification,
   sendNotificationToMultiple,
   sendNotificationToTopic,
+  subscribeTokenToTopic,
+  unsubscribeTokenFromTopic,
   initializeFirebase,
 };
 

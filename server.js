@@ -47,6 +47,10 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/splitwise
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.error('MongoDB connection error:', err));
 
+// Initialize Firebase Admin SDK for notifications
+const { initializeFirebase } = require('./backend/services/notificationService');
+initializeFirebase();
+
 // API Routes
 app.use('/api/auth', require('./backend/routes/auth'));
 app.use('/api/users', require('./backend/routes/users'));

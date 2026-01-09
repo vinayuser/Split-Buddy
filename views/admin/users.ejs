@@ -122,6 +122,90 @@
             color: white;
             border-color: #667eea;
         }
+        .btn-small {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+        .modal-header h3 {
+            margin: 0;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .token-status {
+            font-size: 0.75rem;
+            color: #666;
+            margin-left: 0.5rem;
+        }
+        .token-status.has-token {
+            color: #28a745;
+        }
+        .token-status.no-token {
+            color: #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -164,7 +248,14 @@
                                 </td>
                                 <td><%= new Date(user.createdAt).toLocaleDateString() %></td>
                                 <td>
-                                    <a href="/admin/users/<%= user._id %>" class="btn">View</a>
+                                    <div class="btn-group">
+                                        <a href="/admin/users/<%= user._id %>" class="btn btn-small">View</a>
+                                        <% if (user.fcmToken) { %>
+                                            <button onclick="openNotificationModal('<%= user._id %>', '<%= user.name || 'User' %>')" class="btn btn-small btn-success">Send Notification</button>
+                                        <% } else { %>
+                                            <span class="token-status no-token" title="User has no FCM token">No Token</span>
+                                        <% } %>
+                                    </div>
                                 </td>
                             </tr>
                         <% }); %>
@@ -182,6 +273,52 @@
             <% } %>
         </div>
     </div>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Send Notification</h3>
+            </div>
+            <form id="notificationForm" method="POST" action="">
+                <div class="form-group">
+                    <label for="notificationTitle">Title *</label>
+                    <input type="text" id="notificationTitle" name="title" required placeholder="Notification title">
+                </div>
+                <div class="form-group">
+                    <label for="notificationBody">Message *</label>
+                    <textarea id="notificationBody" name="body" required placeholder="Notification message"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeNotificationModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success">Send Notification</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openNotificationModal(userId, userName) {
+            const modal = document.getElementById('notificationModal');
+            const form = document.getElementById('notificationForm');
+            form.action = `/admin/users/${userId}/send-notification`;
+            modal.style.display = 'block';
+        }
+
+        function closeNotificationModal() {
+            const modal = document.getElementById('notificationModal');
+            modal.style.display = 'none';
+            document.getElementById('notificationForm').reset();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('notificationModal');
+            if (event.target === modal) {
+                closeNotificationModal();
+            }
+        }
+    </script>
 </body>
 </html>
 

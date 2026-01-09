@@ -192,7 +192,7 @@ router.post('/', authenticate, checkSubscriptionForWrite, [
         const payerName = expense.paidBy?.name || 'Someone';
         const groupName = group.name || 'Group';
         
-        await sendNotificationToMultiple(
+        const notificationResult = await sendNotificationToMultiple(
           fcmTokens,
           `New expense in ${groupName}`,
           `${payerName} added ₹${expense.amount.toFixed(2)} - ${expense.description}`,
@@ -206,6 +206,10 @@ router.post('/', authenticate, checkSubscriptionForWrite, [
             groupName: groupName,
           }
         );
+        
+        console.log(`Expense notification sent: ${notificationResult.successCount || 0} successful, ${notificationResult.failureCount || 0} failed`);
+      } else {
+        console.log('No FCM tokens found for group members');
       }
     } catch (notificationError) {
       // Don't fail the request if notification fails
@@ -305,6 +309,47 @@ router.put('/:expenseId', authenticate, checkSubscriptionForWrite, [
     await expense.populate('paidBy', 'name avatar');
     await expense.populate('splits.userId', 'name avatar');
     await expense.populate('createdBy', 'name');
+
+    // Send notifications to group members (except the updater)
+    try {
+      const updatedGroup = await Group.findById(expense.groupId).populate('members.userId', 'name fcmToken');
+      const updaterId = userId.toString();
+      
+      // Get all member IDs who should receive notification
+      const memberIds = updatedGroup.members
+        .map(m => {
+          const memberId = m.userId && (m.userId._id ? m.userId._id.toString() : m.userId.toString());
+          return memberId;
+        })
+        .filter(memberId => memberId && memberId !== updaterId);
+
+      // Get FCM tokens for all members
+      const users = await User.find({ _id: { $in: memberIds }, fcmToken: { $ne: null } });
+      const fcmTokens = users.map(u => u.fcmToken).filter(token => token);
+
+      if (fcmTokens.length > 0) {
+        const payerName = expense.paidBy?.name || 'Someone';
+        const groupName = updatedGroup.name || 'Group';
+        
+        await sendNotificationToMultiple(
+          fcmTokens,
+          `Expense updated in ${groupName}`,
+          `${payerName} updated expense: ₹${expense.amount.toFixed(2)} - ${expense.description}`,
+          {
+            type: 'expense_updated',
+            expenseId: expense._id.toString(),
+            groupId: expense.groupId.toString(),
+            amount: expense.amount.toString(),
+            description: expense.description,
+            payerName: payerName,
+            groupName: groupName,
+          }
+        );
+      }
+    } catch (notificationError) {
+      // Don't fail the request if notification fails
+      console.error('Error sending update notifications:', notificationError);
+    }
 
     res.json({
       success: true,
