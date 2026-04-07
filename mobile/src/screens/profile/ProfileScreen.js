@@ -248,6 +248,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <Text style={styles.pageTitle}>Profile</Text>
       {/* Profile Header Card */}
       <Card style={styles.profileHeaderCard} mode="elevated">
         <Card.Content style={styles.profileHeaderContent}>
@@ -549,17 +550,26 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  pageTitle: {
+    ...typography.h2,
+    textAlign: 'center',
+    color: colors.primary,
+    fontWeight: '700',
+    marginBottom: spacing.md,
   },
   profileHeaderCard: {
     backgroundColor: colors.background,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
     overflow: 'hidden',
+    elevation: 0,
+    shadowOpacity: 0,
   },
   profileHeaderContent: {
     alignItems: 'center',
@@ -577,7 +587,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 4,
-    borderColor: colors.background,
+    borderColor: colors.surfaceHighest,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -589,7 +599,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: borderRadius.round,
     borderWidth: 4,
-    borderColor: colors.background,
+    borderColor: colors.surfaceHighest,
   },
   avatarText: {
     ...typography.h1,
@@ -607,7 +617,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: colors.background,
+    borderColor: colors.surfaceLowest,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -687,9 +697,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   sectionCard: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceLowest,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   sectionTitleContainer: {
     flexDirection: 'row',
@@ -716,8 +728,8 @@ const styles = StyleSheet.create({
   },
   subscriptionCard: {
     padding: spacing.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: borderRadius.sm,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
   },
   subscriptionHeader: {
     flexDirection: 'row',
@@ -727,7 +739,7 @@ const styles = StyleSheet.create({
   },
   subscriptionLabel: {
     ...typography.body,
-    color: colors.textPrimary,
+    color: 'rgba(255,255,255,0.8)',
   },
   statusBadge: {
     paddingHorizontal: spacing.sm,
@@ -740,7 +752,7 @@ const styles = StyleSheet.create({
   },
   subscriptionDate: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: 'rgba(255,255,255,0.85)',
     marginTop: spacing.xs,
   },
   subscriptionButton: {
@@ -750,12 +762,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.divider,
+    borderTopColor: 'rgba(255,255,255,0.25)',
   },
   subscriptionButtonText: {
     ...typography.body,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.surfaceLowest,
   },
   label: {
     ...typography.bodySmall,

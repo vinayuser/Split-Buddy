@@ -79,6 +79,8 @@ export default function LoginScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.bgAccentTop} />
+        <View style={styles.bgAccentMiddle} />
         {/* App Logo */}
         <View style={styles.logoSection}>
           <View style={styles.logoCircleContainer}>
@@ -88,6 +90,8 @@ export default function LoginScreen({ navigation }) {
               resizeMode="cover"
             />
           </View>
+          <Text style={styles.brandTitle}>Split Buddy</Text>
+          <Text style={styles.brandSubtitle}>Finances made social.</Text>
         </View>
 
         {/* Features Grid */}
@@ -192,7 +196,7 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -200,28 +204,59 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl * 2,
     paddingBottom: spacing.xl,
     justifyContent: 'center',
+    position: 'relative',
+  },
+  bgAccentTop: {
+    position: 'absolute',
+    top: -100,
+    right: -100,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(120, 251, 182, 0.20)',
+  },
+  bgAccentMiddle: {
+    position: 'absolute',
+    top: '35%',
+    left: -120,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(185, 235, 202, 0.30)',
   },
   logoSection: {
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
   logoCircleContainer: {
-    width: isSmallScreen ? 180 : 220,
-    height: isSmallScreen ? 180 : 220,
-    borderRadius: isSmallScreen ? 90 : 110,
+    width: isSmallScreen ? 108 : 116,
+    height: isSmallScreen ? 108 : 116,
+    borderRadius: isSmallScreen ? 54 : 58,
     overflow: 'hidden',
-    backgroundColor: colors.background,
-    borderWidth: 4,
-    borderColor: colors.primary,
+    backgroundColor: colors.primary,
+    borderWidth: 0,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
   },
   appLogo: {
     width: '100%',
     height: '100%',
+  },
+  brandTitle: {
+    marginTop: spacing.lg,
+    fontSize: 48,
+    lineHeight: 52,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  brandSubtitle: {
+    marginTop: spacing.xs,
+    fontSize: 16,
+    color: colors.secondary,
+    fontWeight: '600',
   },
   featuresGrid: {
     flexDirection: 'row',
@@ -239,19 +274,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.sm,
     minWidth: isSmallScreen ? 140 : 160,
-    shadowColor: '#000',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
-    borderWidth: 1,
-    borderColor: colors.divider,
+    borderWidth: 0,
   },
   featureIconContainer: {
     width: 56,
     height: 56,
     borderRadius: borderRadius.round,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: 'rgba(0, 109, 67, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -272,8 +306,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   phoneInput: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceHighest,
     marginBottom: spacing.lg,
+    borderRadius: borderRadius.md,
   },
   phoneInputContent: {
     minHeight: 56,
@@ -283,7 +318,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
     overflow: 'hidden',

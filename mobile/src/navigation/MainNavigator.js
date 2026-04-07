@@ -149,7 +149,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
           iconName = 'circle';
         }
         
-        const color = isFocused ? '#6200ee' : 'gray';
+        const color = isFocused ? '#006D43' : '#6D7A70';
 
         return (
           <TouchableOpacity
@@ -162,7 +162,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
             onLongPress={onLongPress}
             style={styles.tabButton}
           >
-            <Icon name={iconName} size={24} color={color} />
+            <Icon name={iconName} size={22} color={color} />
             <Text style={[styles.tabLabel, { color }]}>{label}</Text>
           </TouchableOpacity>
         );
@@ -180,7 +180,7 @@ export default function MainNavigator() {
       }}
     >
       <Tab.Screen name="Home" component={HomeStack} />
-      <Tab.Screen name="Friends" component={FriendsScreen} />
+      <Tab.Screen name="Friends" component={FriendsScreen} options={{ tabBarLabel: 'Groups' }} />
       <Tab.Screen 
         name="Logo" 
         component={() => null} 
@@ -200,17 +200,17 @@ export default function MainNavigator() {
 const styles = StyleSheet.create({
   tabBarContainer: {
     flexDirection: 'row',
-    height: 60,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingBottom: 5,
-    paddingTop: 5,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    height: 72,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    paddingBottom: 8,
+    paddingTop: 8,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    elevation: 10,
+    shadowColor: '#006D43',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
   },
   tabButton: {
     flex: 1,
@@ -218,8 +218,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 10,
     marginTop: 4,
+    fontWeight: '600',
   },
   logoTabContainer: {
     flex: 1,
@@ -227,15 +228,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#fff',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#006D43',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#6200ee',
+    marginTop: -20,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
     overflow: 'hidden',
+    shadowColor: '#006D43',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.24,
+    shadowRadius: 16,
+    elevation: 8,
   },
   logoImage: {
     width: 40,

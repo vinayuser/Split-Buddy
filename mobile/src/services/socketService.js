@@ -3,8 +3,8 @@ import { storage } from '../utils/storage';
 
 // Get API base URL (same as api.js)
 // For local development use: http://localhost:3010/api
-// For production use: http://13.232.231.52:3010/api
-const API_BASE_URL = process.env.API_BASE_URL || 'http://13.232.231.52:3010/api';
+// For production use: http://13.203.227.4:3003/api
+const API_BASE_URL = process.env.API_BASE_URL || 'http://13.203.227.4:3003/api';
 
 // Socket URL - use SOCKET_URL if set, otherwise derive from API_BASE_URL
 // If you need a different socket URL, you can set SOCKET_URL environment variable

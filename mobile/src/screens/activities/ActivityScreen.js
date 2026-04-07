@@ -26,6 +26,7 @@ export default function ActivityScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('All');
 
   useEffect(() => {
     loadActivities(1, true);
@@ -207,6 +208,37 @@ export default function ActivityScreen() {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={renderFooter}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
+              <Text style={styles.headerTitle}>Activity</Text>
+              <TouchableOpacity>
+                <Text style={styles.clearText}>Clear all</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.filterRow}>
+              {['All', 'Expenses', 'Settlements', 'Groups'].map((filter) => (
+                <TouchableOpacity
+                  key={filter}
+                  style={[
+                    styles.filterChip,
+                    activeFilter === filter && styles.filterChipActive,
+                  ]}
+                  onPress={() => setActiveFilter(filter)}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      activeFilter === filter && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {filter}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Icon name="bell-outline" size={64} color={colors.iconSecondary} />
@@ -233,17 +265,59 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  header: {
+    marginBottom: spacing.md,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  headerTitle: {
+    ...typography.h1,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  clearText: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'nowrap',
+  },
+  filterChip: {
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: borderRadius.round,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+  },
+  filterChipText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: colors.surfaceLowest,
   },
   activityCard: {
     backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    shadowColor: colors.shadow,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
   },
   activityHeader: {
     flexDirection: 'row',

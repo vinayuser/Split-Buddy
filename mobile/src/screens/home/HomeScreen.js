@@ -371,14 +371,14 @@ export default function HomeScreen({ navigation }) {
             <Card style={styles.summaryCard} mode="elevated">
               <Card.Content>
                 <View style={styles.summaryHeader}>
-                  <Text variant="titleLarge" style={styles.summaryTitle}>Balance Summary</Text>
-                  <Icon name="wallet-outline" size={24} color={colors.primary} />
+                  <Text variant="titleLarge" style={styles.summaryTitle}>Total balance</Text>
+                  <Icon name="wallet-outline" size={22} color="#FFFFFF" />
                 </View>
                 
                 <View style={styles.balanceRow}>
                   <View style={styles.balanceItem}>
                     <Text variant="bodySmall" style={styles.balanceLabel} numberOfLines={1}>
-                      Total Balance
+                      Total balance
                     </Text>
                     <Text 
                       variant="titleLarge" 
@@ -390,7 +390,7 @@ export default function HomeScreen({ navigation }) {
                       adjustsFontSizeToFit={true}
                       minimumFontScale={0.7}
                     >
-                      {totalBalance >= 0 ? '+' : ''}₹{Math.abs(totalBalance).toFixed(0)}
+                      ₹{Math.abs(totalBalance).toFixed(0)}
                     </Text>
                   </View>
                 </View>
@@ -687,18 +687,23 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
   },
   cardSection: {
     padding: spacing.md,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
   },
   summaryCard: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primaryContainer,
+    borderRadius: borderRadius.xl,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 6,
   },
   summaryHeader: {
     flexDirection: 'row',
@@ -708,8 +713,8 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontWeight: '700',
-    color: colors.textPrimary,
-    fontSize: 18,
+    color: '#FFFFFF',
+    fontSize: 16,
   },
   balanceRow: {
     marginBottom: spacing.sm,
@@ -718,25 +723,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceLabel: {
-    color: colors.textSecondary,
+    color: 'rgba(255,255,255,0.8)',
     marginBottom: spacing.xs / 2,
     fontWeight: '500',
     fontSize: 12,
   },
   balanceValue: {
-    fontWeight: '700',
+    fontWeight: '800',
     textAlign: 'center',
     paddingHorizontal: spacing.xs,
+    fontSize: 48,
+    lineHeight: 52,
   },
   balanceValuePositive: {
-    color: colors.balancePositive,
+    color: '#FFFFFF',
   },
   balanceValueNegative: {
-    color: colors.balanceNegative,
+    color: '#FFFFFF',
   },
   summaryDivider: {
     marginVertical: spacing.sm,
-    backgroundColor: colors.divider,
+    backgroundColor: 'rgba(255,255,255,0.24)',
   },
   summaryGrid: {
     flexDirection: 'row',
@@ -748,11 +755,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xs,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderRadius: borderRadius.md,
   },
   summaryItemLabel: {
-    color: colors.textSecondary,
+    color: 'rgba(255,255,255,0.85)',
     marginTop: spacing.xs / 2,
     marginBottom: spacing.xs / 2,
     fontWeight: '500',
@@ -760,21 +767,21 @@ const styles = StyleSheet.create({
   },
   summaryItemValue: {
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: '#FFFFFF',
     fontSize: 16,
   },
   summaryItemValuePositive: {
-    color: colors.balancePositive,
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 16,
   },
   summaryItemValueNegative: {
-    color: colors.balanceNegative,
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 16,
   },
   faqCard: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: borderRadius.lg,
   },
   faqContainer: {
@@ -810,22 +817,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   premiumCard: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceLowest,
     borderRadius: borderRadius.lg,
-    borderWidth: 2,
-    borderColor: '#FFD700',
+    borderWidth: 0,
   },
   // Card style for groups and banners - match activity card style
   contentCard: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceLowest,
     borderRadius: borderRadius.lg,
-    // Same as activityCard - no border, no shadow
-    elevation: 0, // Remove shadow
-    shadowOpacity: 0, // Remove shadow
+    elevation: 0,
+    shadowOpacity: 0,
   },
   // Banner card - no shadow, no border
   bannerCard: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceLowest,
     borderRadius: borderRadius.lg,
     elevation: 0, // Remove shadow
     shadowOpacity: 0, // Remove shadow

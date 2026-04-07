@@ -1,46 +1,54 @@
 // Splitwise-inspired color scheme
 export const colors = {
   // Backgrounds
-  background: '#FFFFFF',
-  backgroundSecondary: '#F8F9FA',
-  backgroundTertiary: '#F5F6F6',
+  background: '#F8F9FA',
+  backgroundSecondary: '#F3F4F5',
+  backgroundTertiary: '#EDEEEF',
+  surfaceLowest: '#FFFFFF',
+  surfaceHigh: '#E7E8E9',
+  surfaceHighest: '#E1E3E4',
   
   // Text
-  textPrimary: '#1A1A1A',
-  textSecondary: '#6B7280',
-  textTertiary: '#9CA3AF',
+  textPrimary: '#191C1D',
+  textSecondary: '#3D4A41',
+  textTertiary: '#6D7A70',
   
   // Splitwise Green (primary brand color)
-  primary: '#00A86B',
-  primaryDark: '#00855A',
+  primary: '#006D43',
+  primaryDark: '#005232',
   primaryLight: '#E6F7F0',
+  primaryContainer: '#00A86B',
+  secondary: '#3A684D',
+  secondaryContainer: '#B9EBCA',
+  tertiary: '#A5393E',
+  tertiaryContainer: '#E86C6E',
   
   // Status colors
-  success: '#00A86B',
-  error: '#EF4444',
+  success: '#006D43',
+  error: '#BA1A1A',
   warning: '#F59E0B',
   
   // Borders & Dividers
-  border: '#E5E7EB',
-  divider: '#E5E7EB',
+  border: '#BCCABE',
+  divider: '#E1E3E4',
   
   // Cards & Surfaces
   card: '#FFFFFF',
-  cardHover: '#F8F9FA',
+  cardHover: '#F3F4F5',
   
   // Balance colors (Splitwise style)
-  balancePositive: '#00A86B',
-  balanceNegative: '#EF4444',
-  balanceNeutral: '#6B7280',
+  balancePositive: '#006D43',
+  balanceNegative: '#A5393E',
+  balanceNeutral: '#3D4A41',
   
   // Inputs
-  inputBackground: '#F8F9FA',
-  inputBorder: '#E5E7EB',
+  inputBackground: '#E1E3E4',
+  inputBorder: '#BCCABE',
   inputFocus: '#00A86B',
   
   // Icons
-  iconPrimary: '#4B5563',
-  iconSecondary: '#9CA3AF',
+  iconPrimary: '#3D4A41',
+  iconSecondary: '#6D7A70',
 };
 
 export const spacing = {

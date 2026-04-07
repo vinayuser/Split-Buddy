@@ -11,7 +11,7 @@ import {
   TextInput as RNTextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, TextInput, Button, Card, Surface } from 'react-native-paper';
+import { Text, Button, Surface } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { authAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -163,31 +163,20 @@ export default function OTPScreen({ route, navigation }) {
               <Icon name="lock" size={12} color={colors.primary} />
             </View>
           </View>
-          <Text variant="headlineSmall" style={styles.title}>Verify Your Phone</Text>
+          <Text variant="headlineSmall" style={styles.title}>Verify your phone number</Text>
           <Text variant="bodyMedium" style={styles.subtitle}>
-            We sent a 6-digit verification code to your phone via SMS
+            We've sent a 6-digit code to your number
           </Text>
         </View>
         {/* OTP Display (Development Mode) */}
         {displayOTP && (
-          <Card mode="outlined" style={styles.otpDisplayCard}>
-            <Card.Content>
-              <View style={styles.otpDisplayBox}>
-                <Icon name="information-outline" size={20} color={colors.primary} />
-                <Text variant="bodySmall" style={styles.otpDisplayLabel}>
-                  Your OTP (Development Mode):
-                </Text>
-                <Text variant="headlineSmall" style={styles.otpDisplayCode}>
-                  {displayOTP}
-                </Text>
-              </View>
-            </Card.Content>
-          </Card>
+          <View style={styles.otpDevNote}>
+            <Text style={styles.otpDevText}>Dev OTP: {displayOTP}</Text>
+          </View>
         )}
 
         {/* OTP Input */}
-        <Card style={styles.inputCard} mode="elevated">
-          <Card.Content style={styles.cardContent}>
+        <View style={styles.inputCard}>
             <View style={styles.otpContainer}>
               {otp.map((digit, index) => (
                 <RNTextInput
@@ -231,29 +220,31 @@ export default function OTPScreen({ route, navigation }) {
               onPress={handleVerify}
               disabled={loading || otp.join('').length < 4}
               loading={loading}
-              icon="check-circle"
+              icon="arrow-right"
               style={styles.button}
               contentStyle={styles.buttonContent}
             >
               Verify
             </Button>
 
-            <Button
-              mode="text"
-              onPress={() => navigation.goBack()}
-              icon="refresh"
-              style={styles.resendButton}
-            >
-              Resend OTP
+            <View style={styles.resendRow}>
+              <Icon name="clock-outline" size={16} color={colors.textSecondary} />
+              <Text style={styles.resendText}>Resend in 0:45</Text>
+            </View>
+            <Button mode="text" onPress={() => navigation.goBack()} style={styles.resendButton}>
+              Didn't receive code?
             </Button>
-          </Card.Content>
-        </Card>
+        </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Didn't receive the code? Tap "Resend OTP" to request a new one.
-          </Text>
+          <View style={styles.stateCardSuccess}>
+            <Icon name="check-circle" size={18} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.stateTitleSuccess}>Code Verified</Text>
+              <Text style={styles.stateSubSuccess}>Welcome back to Split Buddy!</Text>
+            </View>
+          </View>
         </View>
           </View>
         </ScrollView>
@@ -265,11 +256,11 @@ export default function OTPScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -284,7 +275,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     marginBottom: spacing.lg,
   },
   backButton: {
@@ -299,9 +290,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   logoContainer: {
-    width: isSmallScreen ? 90 : 100,
-    height: isSmallScreen ? 90 : 100,
-    borderRadius: borderRadius.round,
+    width: isSmallScreen ? 92 : 96,
+    height: isSmallScreen ? 92 : 96,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
   },
   logoGradient: {
@@ -312,17 +303,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   secureBadge: {
-    position: 'absolute',
-    bottom: -4,
-    right: -4,
-    width: scaleSize(28),
-    height: scaleSize(28),
-    borderRadius: borderRadius.round,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
+    display: 'none',
   },
   infoCard: {
     marginTop: spacing.md,
@@ -343,39 +324,34 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: 'center',
+    fontWeight: '800',
+    fontSize: 40,
   },
   subtitle: {
     color: colors.textSecondary,
     textAlign: 'center',
+    fontSize: 20,
   },
-  otpDisplayCard: {
+  otpDevNote: {
     marginBottom: spacing.lg,
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.round,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    alignSelf: 'center',
   },
-  otpDisplayBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  otpDisplayLabel: {
-    color: colors.primaryDark,
-    flex: 1,
-  },
-  otpDisplayCode: {
-    color: colors.primaryDark,
-    fontWeight: '700',
-    letterSpacing: 4,
+  otpDevText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   inputCard: {
-    flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     gap: isSmallScreen ? spacing.xs / 2 : spacing.xs,
     paddingHorizontal: 0, // Remove extra padding
     flexWrap: 'nowrap', // Keep all inputs in one row
@@ -394,13 +370,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   otpInputNative: {
-    width: wp(11), // Fixed width - 11% of screen width (6 inputs + gaps should fit)
-    aspectRatio: 1, // Square aspect ratio
-    height: scaleSize(56), // Fixed height for consistency
-    borderWidth: 2,
+    width: wp(12),
+    aspectRatio: 1,
+    height: scaleSize(64),
+    borderWidth: 0,
     borderColor: colors.inputBorder,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceHighest,
     fontSize: scaleFont(22),
     fontWeight: '700',
     color: colors.textPrimary,
@@ -409,12 +385,8 @@ const styles = StyleSheet.create({
   },
   otpInputNativeFocused: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
-    elevation: 2,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    borderWidth: 2,
+    backgroundColor: colors.background,
   },
   otpInputNativeFilled: {
     borderColor: colors.primary,
@@ -422,12 +394,29 @@ const styles = StyleSheet.create({
   },
   button: {
     marginBottom: spacing.md,
+    borderRadius: borderRadius.lg,
   },
   buttonContent: {
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
   },
   resendButton: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  resendRow: {
+    marginTop: spacing.md,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.round,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  resendText: {
+    color: colors.textSecondary,
+    fontWeight: '700',
+    fontSize: 16,
   },
   footer: {
     paddingBottom: spacing.lg,
@@ -437,6 +426,25 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  stateCardSuccess: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(0, 168, 107, 0.25)',
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  stateTitleSuccess: {
+    color: colors.primaryDark,
+    fontWeight: '800',
+    fontSize: 18,
+  },
+  stateSubSuccess: {
+    color: colors.secondary,
+    fontSize: 14,
   },
 });
 

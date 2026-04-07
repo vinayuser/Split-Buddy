@@ -978,7 +978,12 @@ export default function GroupDetailScreen({ route, navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Icon name="arrow-left" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.groupName} numberOfLines={1}>{group?.name}</Text>
+          <View style={styles.groupHeaderTextWrap}>
+            <Text style={styles.groupName} numberOfLines={1}>{group?.name}</Text>
+            <Text style={styles.groupSubTitle}>
+              {(group?.members?.length || 0)} MEMBERS
+            </Text>
+          </View>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => navigation.navigate('EditGroup', { groupId })} style={styles.iconButton}>
@@ -1314,7 +1319,7 @@ export default function GroupDetailScreen({ route, navigation }) {
                 <Icon name={showContacts ? "arrow-left" : "close"} size={24} color={colors.textPrimary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>
-                {showContacts ? 'Select Contacts' : 'Invite Member'}
+                {showContacts ? 'Suggested Contacts' : 'Invite to Group'}
               </Text>
               <View style={{ width: 24 }} />
             </View>
@@ -1322,7 +1327,7 @@ export default function GroupDetailScreen({ route, navigation }) {
             {!showContacts ? (
               <>
                 <Text style={styles.modalSubtitle}>
-                  Choose from contacts or enter manually
+                  Split expenses easily with your crew.
                 </Text>
 
                 <TouchableOpacity
@@ -1511,9 +1516,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: spacing.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    backgroundColor: colors.surfaceLowest,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -1525,9 +1528,20 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   groupName: {
-    ...typography.h1,
+    ...typography.h2,
     color: colors.textPrimary,
     flex: 1,
+    fontWeight: '700',
+  },
+  groupHeaderTextWrap: {
+    flex: 1,
+  },
+  groupSubTitle: {
+    ...typography.caption,
+    letterSpacing: 1,
+    color: colors.textTertiary,
+    marginTop: 2,
+    fontWeight: '700',
   },
   headerActions: {
     flexDirection: 'row',
@@ -1541,15 +1555,15 @@ const styles = StyleSheet.create({
     bottom: spacing.md,
     width: scaleSize(56),
     height: scaleSize(56),
-    borderRadius: borderRadius.round,
+    borderRadius: borderRadius.lg,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
   },
   fabSecondary: {
     bottom: spacing.md + 70,
@@ -1917,11 +1931,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#f3e5f5',
+    backgroundColor: colors.primaryLight,
     gap: 6,
   },
   addMemberText: {
-    color: '#6200ee',
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -2372,15 +2386,15 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   expenseCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.surfaceLowest,
+    borderRadius: borderRadius.lg,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
   },
   expenseHeader: {
     flexDirection: 'row',
@@ -2458,8 +2472,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: colors.surfaceLowest,
+    borderRadius: borderRadius.lg,
     padding: 20,
     width: '90%',
     maxWidth: 400,
@@ -2467,12 +2481,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   modalLabel: {
@@ -2526,7 +2540,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.surfaceHigh,
   },
   cancelButtonText: {
     color: '#666',
@@ -2534,7 +2548,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   addButton: {
-    backgroundColor: '#6200ee',
+    backgroundColor: colors.primary,
   },
   addButtonText: {
     color: '#fff',
@@ -2548,7 +2562,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 16,
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.surfaceHighest,
     padding: 4,
   },
   toggle: {
@@ -2558,7 +2572,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   toggleActive: {
-    backgroundColor: '#6200ee',
+    backgroundColor: colors.primary,
   },
   toggleText: {
     fontSize: 16,
@@ -2653,15 +2667,15 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
   },
   modalContentLarge: {
-    maxHeight: '80%',
-    height: '80%',
+    maxHeight: '86%',
+    height: '86%',
   },
   contactsButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.surfaceLowest,
     padding: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
     gap: spacing.sm,
   },
@@ -2786,11 +2800,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   settlementHintBanner: {
-    backgroundColor: '#FFF9E6',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    backgroundColor: 'rgba(0, 109, 67, 0.12)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
   },
   settlementHintContent: {
     flexDirection: 'row',
@@ -2809,7 +2824,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   settlementHintViewButton: {
-    backgroundColor: colors.warning,
+    backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
@@ -2823,9 +2838,7 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
   },
   insightsContainer: {
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    backgroundColor: colors.backgroundSecondary,
     paddingVertical: spacing.md,
   },
   insightsScrollContent: {

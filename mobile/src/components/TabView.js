@@ -46,17 +46,15 @@ export default function TabView({ tabs, activeTab, onTabChange }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.backgroundSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    backgroundColor: colors.surfaceLowest,
   },
   tabBar: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.md,
   },
   tab: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -66,12 +64,12 @@ const styles = StyleSheet.create({
     // Active state handled by text color
   },
   tabText: {
-    ...typography.bodySmall,
+    ...typography.body,
     fontWeight: '500',
     color: colors.textSecondary,
   },
   tabTextActive: {
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.primary,
   },
   badge: {
@@ -90,14 +88,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   indicatorContainer: {
-    height: 3,
+    height: 4,
     position: 'relative',
+    paddingHorizontal: spacing.md,
   },
   indicator: {
     position: 'absolute',
-    height: 3,
+    height: 4,
     backgroundColor: colors.primary,
     bottom: 0,
+    borderRadius: borderRadius.round,
   },
 });
 

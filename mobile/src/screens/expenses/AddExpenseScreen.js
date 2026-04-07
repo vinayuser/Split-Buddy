@@ -8,7 +8,6 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-  Switch,
   Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -352,7 +351,7 @@ export default function AddExpenseScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   scrollView: {
     flex: 1,
@@ -365,18 +364,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   label: {
-    ...typography.body,
+    ...typography.h3,
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   input: {
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: borderRadius.sm,
+    borderWidth: 0,
+    borderRadius: borderRadius.md,
     padding: spacing.md,
     ...typography.body,
-    backgroundColor: colors.inputBackground,
+    backgroundColor: colors.surfaceHighest,
     color: colors.textPrimary,
   },
   memberOption: {
@@ -384,9 +382,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
-    borderRadius: borderRadius.sm,
+    borderWidth: 0,
+    borderRadius: borderRadius.round,
     marginBottom: spacing.sm,
     backgroundColor: colors.card,
   },
@@ -426,8 +423,8 @@ const styles = StyleSheet.create({
   },
   toggleContainer: {
     flexDirection: 'row',
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.inputBackground,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceHighest,
     padding: 4,
   },
   toggle: {
@@ -437,15 +434,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm - 2,
   },
   toggleActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.surfaceLowest,
   },
   toggleText: {
     ...typography.body,
     color: colors.textSecondary,
   },
   toggleTextActive: {
-    color: colors.background,
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: '700',
   },
   participantRow: {
     flexDirection: 'row',
@@ -461,7 +458,7 @@ const styles = StyleSheet.create({
     width: scaleSize(24),
     height: scaleSize(24),
     borderWidth: 2,
-    borderColor: colors.inputBorder,
+    borderColor: colors.surfaceHigh,
     borderRadius: borderRadius.sm - 4,
     marginRight: spacing.sm,
     alignItems: 'center',
@@ -475,24 +472,21 @@ const styles = StyleSheet.create({
     width: wp(25), // 25% of screen width (responsive)
     minWidth: 80,
     maxWidth: 120,
-    borderWidth: 1,
-    borderColor: colors.inputBorder,
+    borderWidth: 0,
     borderRadius: borderRadius.sm,
     padding: spacing.sm,
     ...typography.bodySmall,
-    backgroundColor: colors.card,
+    backgroundColor: colors.surfaceHighest,
     color: colors.textPrimary,
   },
   footer: {
     padding: spacing.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
+    backgroundColor: colors.surfaceLowest,
   },
   button: {
     backgroundColor: colors.primary,
     padding: spacing.md,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -511,10 +505,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: spacing.md,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: colors.surfaceHigh,
     borderStyle: 'dashed',
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.card,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceLowest,
     gap: spacing.sm,
   },
   imagePickerText: {
